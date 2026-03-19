@@ -1,97 +1,51 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "OKX API — Node.js SDK"
+description: "Complete Node.js & TypeScript SDK for OKX REST APIs and WebSockets"
 ---
 
-## Setting up
+The `okx-api` package is a fully-featured, actively maintained Node.js and TypeScript SDK for interacting with the [OKX exchange](https://www.okx.com). It covers every endpoint in OKX's REST API and provides a robust, auto-reconnecting WebSocket client for real-time market data and private account streams.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the package and make your first API call in minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Learn how to create and configure your OKX API credentials
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="REST Client" icon="server" href="/rest-client/overview">
+    Explore the full REST API — account, trading, funding and more
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="WebSocket Client" icon="bolt" href="/websocket-client/overview">
+    Subscribe to real-time streams with automatic reconnection
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Installation
 
-Everything you need to create world-class documentation.
+<CodeGroup>
+```bash npm
+npm install okx-api
+```
+```bash yarn
+yarn add okx-api
+```
+```bash pnpm
+pnpm add okx-api
+```
+</CodeGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Key exports
 
-## Need inspiration?
+```typescript
+import {
+  RestClient,           // Full REST API client
+  WebsocketClient,      // Real-time WebSocket streams
+  WebsocketAPIClient,   // Promise-based WebSocket API (orders)
+} from 'okx-api';
+```
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Community & support
+
+- **Issues & bugs** — [GitHub Issues](https://github.com/tiagosiebler/okx-api/issues)
+- **Discussion** — [Node.js Algo Traders on Telegram](https://t.me/nodetraders)
+- **Announcements** — [@sieblyio on X/Twitter](https://x.com/sieblyio)

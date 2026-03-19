@@ -288,12 +288,11 @@ amendSpreadOrder(
 Amend an open spread order.
 
 <ParamField body="params" type="WSAPIAmendSpreadOrderRequestV5" required>
-  - `sprdId` (string, required) — Spread instrument ID.
   - `ordId` (string) — OKX order ID. Either `ordId` or `clOrdId` is required.
   - `clOrdId` (string) — Client order ID.
   - `newSz` (string) — New order size.
   - `newPx` (string) — New order price.
-  - `reqId` (string) — Client-assigned request ID.
+  - `reqId` (string) — Client-assigned request ID, echoed back in the response.
 </ParamField>
 
 **OKX docs:** [WS spread amend order](https://www.okx.com/docs-v5/en/#spread-trading-websocket-trade-api-ws-amend-order)
@@ -311,7 +310,6 @@ cancelSpreadOrder(
 Cancel a single open spread order.
 
 <ParamField body="params" type="WSAPICancelSpreadOrderRequestV5" required>
-  - `sprdId` (string, required) — Spread instrument ID.
   - `ordId` (string) — OKX order ID. Either `ordId` or `clOrdId` is required.
   - `clOrdId` (string) — Client order ID.
 </ParamField>
@@ -331,7 +329,7 @@ massCancelSpreadOrders(
 Cancel all open spread orders for a given spread instrument.
 
 <ParamField body="params" type="WSAPISpreadMassCancelOrdersRequestV5" required>
-  - `sprdId` (string, required) — Spread instrument ID.
+  - `sprdId` (string, optional) — Spread instrument ID to target. Omit to cancel all open spread orders.
 </ParamField>
 
 **OKX docs:** [WS spread cancel all orders](https://www.okx.com/docs-v5/en/#spread-trading-websocket-trade-api-ws-cancel-all-orders)

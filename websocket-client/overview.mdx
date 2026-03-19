@@ -126,6 +126,14 @@ wsClient.connectPublic();
 wsClient.connectPrivate();
 ```
 
+## Legacy WebSocket client
+
+The SDK also exports `WebsocketClientLegacy`, which is a previous implementation retained for backwards compatibility. New integrations should use `WebsocketClient` instead.
+
+```typescript
+import { WebsocketClientLegacy } from 'okx-api';
+```
+
 ## Learn more
 
 <CardGroup cols={2}>

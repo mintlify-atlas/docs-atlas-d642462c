@@ -86,7 +86,6 @@ You need a Node.js project with TypeScript support (recommended) or plain JavaSc
 
     ```typescript
     import { RestClient } from 'okx-api';
-    import { OrderRequest } from 'okx-api/types';
 
     const client = new RestClient({
       apiKey: process.env.API_KEY_COM,
@@ -96,7 +95,7 @@ You need a Node.js project with TypeScript support (recommended) or plain JavaSc
 
     (async () => {
       try {
-        const order: OrderRequest = {
+        const order = {
           instId: 'BTC-USDT',
           ordType: 'market',
           side: 'buy',
@@ -219,10 +218,10 @@ You need a Node.js project with TypeScript support (recommended) or plain JavaSc
   <Card title="Authentication" href="/authentication">
     Learn how to create OKX API keys, pass credentials, and configure region and demo trading mode.
   </Card>
-  <Card title="REST Client" href="/rest-client">
+  <Card title="REST Client" href="/rest-client/overview">
     Browse every available method, request type, and response shape.
   </Card>
-  <Card title="WebSocket Client" href="/websocket-client">
+  <Card title="WebSocket Client" href="/websocket-client/overview">
     Understand WebSocket events, reconnection behavior, and private channel authentication.
   </Card>
   <Card title="WebSocket API Client" href="/websocket-api-client/overview">

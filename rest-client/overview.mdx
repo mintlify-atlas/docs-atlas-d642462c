@@ -36,9 +36,13 @@ const client = new RestClient({
 | `apiKey` | `string` | No | API key from OKX. Required for private endpoints. |
 | `apiSecret` | `string` | No | API secret from OKX. Required for private endpoints. |
 | `apiPass` | `string` | No | API passphrase set when creating the key. Required for private endpoints. |
+| `market` | `'GLOBAL' \| 'EEA' \| 'US' \| 'prod'` | No | Regional endpoint to connect to. Defaults to `'GLOBAL'` (`www.okx.com`). |
 | `demoTrading` | `boolean` | No | Set to `true` to use the OKX demo trading environment. |
 | `baseUrl` | `string` | No | Override the default REST base URL. |
-| `timeout` | `number` | No | Request timeout in milliseconds. Default is `10000`. |
+| `keepAlive` | `boolean` | No | Enable HTTP KeepAlive for REST requests via axios. |
+| `strict_param_validation` | `boolean` | No | Throw errors when `true` and any parameter is `undefined`. |
+| `parse_exceptions` | `boolean` | No | Whether to post-process request exceptions. Default: `true`. |
+| `customSignMessageFn` | `function` | No | Provide a custom HMAC signing function for higher performance (e.g. Node.js `createHmac`). |
 
 ## Request and response pattern
 

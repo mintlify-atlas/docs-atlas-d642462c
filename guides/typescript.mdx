@@ -23,7 +23,7 @@ Every request parameter object has a corresponding TypeScript interface. Import 
 
 ```typescript
 import { RestClient } from 'okx-api';
-import { OrderRequest } from 'okx-api/src/types/rest/request/trade';
+import type { OrderRequest } from 'okx-api';
 
 const client = new RestClient({
   apiKey: process.env.API_KEY_COM,
