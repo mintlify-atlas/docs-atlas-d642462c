@@ -1,0 +1,155 @@
+---
+title: 'Grid Trading'
+description: 'Create and manage spot, futures, and contract grid bots, plus AI parameter recommendations and RSI back-testing.'
+---
+
+Grid trading bots automate buy-low/sell-high strategies within a price range. Authentication is required for order placement and management. AI parameters and RSI back-testing are public endpoints.
+
+## Method reference
+
+### Order management
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `placeGridAlgoOrder(params)` | POST | Yes | `/api/v5/tradingBot/grid/order-algo` | Create a spot, futures, or contract grid |
+| `amendGridAlgoOrder(params)` | POST | Yes | `/api/v5/tradingBot/grid/amend-order-algo` | Amend TP/SL on a running grid |
+| `stopGridAlgoOrder(orders)` | POST | Yes | `/api/v5/tradingBot/grid/stop-order-algo` | Stop one or more grids |
+| `instantTriggerGridAlgoOrder(params)` | POST | Yes | `/api/v5/tradingBot/grid/order-instant-trigger` | Manually trigger a grid |
+| `closeGridContractPosition(params)` | POST | Yes | `/api/v5/tradingBot/grid/close-position` | Close position of a contract grid |
+| `cancelGridContractCloseOrder(params)` | POST | Yes | `/api/v5/tradingBot/grid/cancel-close-order` | Cancel a contract grid close order |
+
+### Queries
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getGridAlgoOrderList(params)` | GET | Yes | `/api/v5/tradingBot/grid/orders-algo-pending` | Active grid orders |
+| `getGridAlgoOrderHistory(params)` | GET | Yes | `/api/v5/tradingBot/grid/orders-algo-history` | Historical grid orders |
+| `getGridAlgoOrderDetails(params)` | GET | Yes | `/api/v5/tradingBot/grid/orders-algo-details` | Details of a specific grid |
+| `getGridAlgoSubOrders(params)` | GET | Yes | `/api/v5/tradingBot/grid/sub-orders` | Sub-orders within a grid |
+| `getGridAlgoOrderPositions(params)` | GET | Yes | `/api/v5/tradingBot/grid/positions` | Positions held by a contract grid |
+
+### Margin and investment
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `spotGridWithdrawIncome(params)` | POST | Yes | `/api/v5/tradingBot/grid/withdraw-income` | Withdraw profit from a spot grid |
+| `computeGridMarginBalance(params)` | POST | Yes | `/api/v5/tradingBot/grid/compute-margin-balance` | Compute required margin adjustment |
+| `adjustGridMarginBalance(params)` | POST | Yes | `/api/v5/tradingBot/grid/margin-balance` | Add or reduce grid margin |
+| `adjustGridInvestment(params)` | POST | Yes | `/api/v5/tradingBot/grid/adjust-investment` | Adjust investment amount |
+
+### Public tools
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getGridAIParameter(params)` | GET | No | `/api/v5/tradingBot/grid/ai-param` | AI-recommended grid parameters |
+| `computeGridMinInvestment(params)` | POST | No | `/api/v5/tradingBot/grid/min-investment` | Minimum investment for a grid config |
+| `getRSIBackTesting(params)` | GET | No | `/api/v5/tradingBot/public/rsi-back-testing` | RSI back-testing results |
+| `getMaxGridQuantity(params)` | GET | No | `/api/v5/tradingBot/grid/grid-quantity` | Maximum number of grid levels |
+
+## Examples
+
+### Place a spot grid
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const [grid] = await client.placeGridAlgoOrder({
+  instId: 'BTC-USDT',
+  algoOrdType: 'grid',        // 'grid' = spot grid
+  maxPx: '70000',             // upper price boundary
+  minPx: '50000',             // lower price boundary
+  gridNum: '10',              // number of grid levels
+  runType: '1',               // '1' = arithmetic spacing
+  investmentAmt: '1000',      // total investment in USDT
+  investmentCcy: 'USDT',
+});
+
+console.log('Grid algo ID:', grid.algoId);
+```
+
+### Get AI-recommended parameters
+
+```typescript
+const client = new RestClient(); // no auth
+
+const [params] = await client.getGridAIParameter({
+  algoOrdType: 'grid',
+  instId: 'BTC-USDT',
+  direction: 'long',
+  duration: '7D',  // look-back window: '7D', '30D', '180D'
+});
+
+console.log('Recommended max price:', params.maxPx);
+console.log('Recommended min price:', params.minPx);
+console.log('Recommended grid count:', params.gridNum);
+console.log('Annualized return estimate:', params.annualizedRate);
+```
+
+### Stop a grid
+
+```typescript
+const result = await client.stopGridAlgoOrder([
+  {
+    algoId: 'your-algo-id',
+    instId: 'BTC-USDT',
+    algoOrdType: 'grid',
+    stopType: '1',  // '1' = sell all positions, '2' = keep positions
+  },
+]);
+console.log('Stopped:', result[0].algoId);
+```
+
+### View active grids
+
+```typescript
+const activeGrids = await client.getGridAlgoOrderList({
+  algoOrdType: 'grid',
+});
+
+for (const g of activeGrids) {
+  console.log(`Grid ${g.algoId}: ${g.instId} ${g.minPx}-${g.maxPx}`);
+  console.log(`  PnL: ${g.pnlRatio}, Running since: ${g.cTime}`);
+}
+```
+
+### Adjust grid margin
+
+```typescript
+// Compute how much to add
+const [compute] = await client.computeGridMarginBalance({
+  algoId: 'your-algo-id',
+  type: 'add',
+  amt: '200',
+});
+console.log('Fee to add margin:', compute.fee);
+
+// Apply the adjustment
+await client.adjustGridMarginBalance({
+  algoId: 'your-algo-id',
+  type: 'add',
+  amt: '200',
+});
+```
+
+### RSI back-testing
+
+```typescript
+const client = new RestClient();
+
+const [result] = await client.getRSIBackTesting({
+  instId: 'BTC-USDT',
+  timeframe: '1H',
+  thold: '30',      // RSI threshold
+  timePeriod: '14', // RSI period
+  triggerCond: 'cross_down', // trigger when RSI crosses below threshold
+  duration: '1M',
+});
+
+console.log('Number of triggers in back-test:', result.triggerNum);
+```

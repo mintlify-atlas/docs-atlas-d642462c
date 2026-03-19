@@ -1,0 +1,188 @@
+---
+title: Error Handling
+description: Understand how the okx-api SDK surfaces REST and WebSocket errors, and how to handle them in your application.
+---
+
+## REST error handling
+
+### Response unwrapping
+
+The SDK automatically inspects every REST response before returning it to your code:
+
+- **Success** — when the HTTP status is `200` and the response body contains `"code": "0"`, only the `data` array is returned. The outer `code`, `msg`, and `data` wrapper is stripped away.
+- **Error** — when the HTTP status indicates an error, _or_ when `code !== "0"` in the response body, the full response object is **thrown** as an exception. This includes the `code` and `msg` fields so you can inspect the exact OKX error.
+
+### The `APIResponse<T>` interface
+
+This is the raw shape OKX returns on every REST call, defined in `src/types/rest/shared.ts`:
+
+```typescript
+export interface APIResponse<T> {
+  code: '0';
+  msg: '';
+  data: T;
+}
+```
+
+On success you receive `T` directly. On failure the SDK throws the full `APIResponse`-shaped object (with a non-`'0'` code and a populated `msg`).
+
+### Catching REST errors
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: 'apiKeyHere',
+  apiSecret: 'apiSecretHere',
+  apiPass: 'apiPassHere',
+});
+
+(async () => {
+  try {
+    // On success, `allBalances` is the unwrapped data array.
+    const allBalances = await client.getBalance();
+    console.log('All balances: ', allBalances);
+
+    const buyResult = await client.submitOrder({
+      instId: 'BTC-USDT',
+      ordType: 'market',
+      side: 'buy',
+      sz: '0.1',
+      tdMode: 'cash',
+      tgtCcy: 'base_ccy',
+    });
+    console.log('buy order result: ', buyResult);
+  } catch (e) {
+    // e is the full OKX response: { code, msg, data }
+    console.error('request failed: ', e);
+  }
+})();
+```
+
+### Inspecting the error object
+
+When a request fails, the thrown object matches the OKX error shape:
+
+```typescript
+try {
+  await client.submitOrder({ /* ... */ });
+} catch (e: any) {
+  // OKX error code, e.g. '51008' for insufficient balance
+  console.error('OKX code:', e.code);
+  // Human-readable message from OKX
+  console.error('OKX message:', e.msg);
+  // Array of per-item error details (present on batch endpoints)
+  console.error('OKX data:', e.data);
+}
+```
+
+### Common OKX error codes
+
+| Code | Meaning |
+|------|---------------------------|
+| `0` | Success |
+| `1` | Operation failed (check `data[].sMsg` for details) |
+| `50000` | Body can not be empty |
+| `50001` | Service temporarily unavailable |
+| `50011` | Request too frequent — rate limit hit |
+| `50013` | System busy, please try again later |
+| `51000` | Parameter `instId` error |
+| `51008` | Insufficient balance |
+| `51010` | Account mode does not support this operation |
+
+<Tip>
+  The full error code reference is in the [OKX API docs](https://www.okx.com/docs-v5/en/#error-code).
+</Tip>
+
+## WebSocket error handling
+
+The `WebsocketClient` is event-driven. Errors surface on the `'exception'` event.
+
+### The `'exception'` event
+
+```typescript
+import { WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient({
+  accounts: [
+    {
+      apiKey: process.env.API_KEY_COM,
+      apiSecret: process.env.API_SECRET_COM,
+      apiPass: process.env.API_PASSPHRASE_COM,
+    },
+  ],
+});
+
+// Errors and unexpected situations emit on 'exception'
+wsClient.on('exception', (data) => {
+  console.error('ws exception: ', data);
+});
+
+// Successful data arrives on 'update'
+wsClient.on('update', (data) => {
+  console.log('ws update (raw data received)', JSON.stringify(data));
+});
+
+// Protocol responses (subscribe confirmations, auth results) arrive on 'response'
+wsClient.on('response', (data) => {
+  console.log('ws response: ', JSON.stringify(data));
+});
+
+// Connection lifecycle
+wsClient.on('open', (data) => {
+  console.log('connection opened:', data.wsKey);
+});
+wsClient.on('reconnect', ({ wsKey }) => {
+  console.log('ws automatically reconnecting....', wsKey);
+});
+wsClient.on('reconnected', (data) => {
+  console.log('ws has reconnected', data?.wsKey);
+});
+```
+
+### WebSocket event reference
+
+| Event | When it fires |
+|-------------|----------------------------------------------|
+| `open` | Connection successfully established |
+| `response` | Subscribe / auth confirmation received |
+| `update` | Market data or account update received |
+| `reconnect` | Reconnect attempt starting |
+| `reconnected` | Reconnect succeeded |
+| `exception` | Error or unexpected condition encountered |
+
+<Note>
+  The SDK handles reconnection automatically. When a connection drops, it tears down the dead socket, reopens a fresh connection, re-authenticates if needed, and re-subscribes to all previously subscribed channels — no extra logic required.
+</Note>
+
+### WebSocket API errors
+
+When using the `WebsocketAPIClient` (order placement via WebSocket), errors are returned as rejected Promises so you can use standard `try/catch`:
+
+```typescript
+import { WebsocketAPIClient } from 'okx-api';
+
+const wsClient = new WebsocketAPIClient({
+  accounts: [
+    {
+      apiKey: process.env.API_KEY_COM,
+      apiSecret: process.env.API_SECRET_COM,
+      apiPass: process.env.API_PASSPHRASE_COM,
+    },
+  ],
+});
+
+try {
+  const res = await wsClient.submitNewOrder({
+    instId: 'BTC-USDT',
+    tdMode: 'cash',
+    side: 'buy',
+    ordType: 'market',
+    sz: '100',
+  });
+  console.log('WS API "submitNewOrder()" result: ', res);
+} catch (e) {
+  // e contains code, msg, and data from OKX
+  console.error('Exception with WS API "submitNewOrder()": ', e);
+}
+```

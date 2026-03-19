@@ -1,0 +1,133 @@
+---
+title: 'Copy Trading'
+description: 'Lead trader management, copy settings, position tracking, and profit sharing for copy trading.'
+---
+
+Copy trading endpoints are split between public methods (no auth, lead trader discovery) and private methods (auth required, managing your copy or lead-trader account).
+
+## Method reference
+
+### Public — lead trader discovery
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getCopytradingConfig(params?)` | GET | `/api/v5/copytrading/public-config` | Copy trading platform configuration |
+| `getCopytradingLeadRanks(params?)` | GET | `/api/v5/copytrading/public-lead-traders` | Public lead trader rankings |
+| `getCopytradingLeadWeeklyPnl(params)` | GET | `/api/v5/copytrading/public-weekly-pnl` | Lead trader weekly PnL |
+| `getCopytradingLeadDailyPnl(params)` | GET | `/api/v5/copytrading/public-pnl` | Lead trader daily PnL |
+| `getCopytradingLeadStats(params)` | GET | `/api/v5/copytrading/public-stats` | Lead trader statistics |
+| `getCopytradingLeadPreferences(params)` | GET | `/api/v5/copytrading/public-preference-currency` | Lead trader currency preferences |
+| `getCopytradingLeadOpenPositions(params)` | GET | `/api/v5/copytrading/public-current-subpositions` | Lead trader open positions |
+| `getCopytradingLeadPositionHistory(params)` | GET | `/api/v5/copytrading/public-subpositions-history` | Lead trader position history |
+| `getCopyTraders(params)` | GET | `/api/v5/copytrading/public-copy-traders` | List copiers for a lead trader |
+
+### Private — copy trading (follower)
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getCopytradingSubpositions(params?)` | GET | `/api/v5/copytrading/current-subpositions` | Your current copy positions |
+| `getCopytradingSubpositionsHistory(params?)` | GET | `/api/v5/copytrading/subpositions-history` | Your copy position history |
+| `submitCopytradingAlgoOrder(params)` | POST | `/api/v5/copytrading/algo-order` | Place an algo order on a copy position |
+| `closeCopytradingSubposition(params)` | POST | `/api/v5/copytrading/close-subposition` | Close a copy position |
+| `getCopytradingInstruments(params?)` | GET | `/api/v5/copytrading/instruments` | Instruments you are copying |
+| `setCopytradingInstruments(params)` | POST | `/api/v5/copytrading/set-instruments` | Set instruments to copy |
+| `getCopytradingAccount()` | GET | `/api/v5/copytrading/config` | Your copy trading account config |
+| `setCopytradingFirstCopy(params)` | POST | `/api/v5/copytrading/first-copy-settings` | Start copying a lead trader |
+| `updateCopytradingCopySettings(params)` | POST | `/api/v5/copytrading/amend-copy-settings` | Update copy settings for a lead trader |
+| `stopCopytradingCopy(params)` | POST | `/api/v5/copytrading/stop-copy-trading` | Stop copying a lead trader |
+| `getCopytradingCopySettings(params)` | GET | `/api/v5/copytrading/copy-settings` | Current copy settings for a lead trader |
+| `getCopytradingBatchLeverageInfo(params)` | GET | `/api/v5/copytrading/batch-leverage-info` | Leverage info for copied instruments |
+| `setCopytradingBatchLeverage(params)` | POST | `/api/v5/copytrading/batch-set-leverage` | Set leverage for copied instruments |
+| `getCopytradingMyLeadTraders(params?)` | GET | `/api/v5/copytrading/current-lead-traders` | Lead traders you are following |
+| `getCopytradingLeadTradersHistory(params?)` | GET | `/api/v5/copytrading/lead-traders-history` | Historical lead traders you followed |
+
+### Private — lead trader
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getCopytradingProfitDetails(params?)` | GET | `/api/v5/copytrading/profit-sharing-details` | Profit-sharing details |
+| `getCopytradingTotalProfit(params?)` | GET | `/api/v5/copytrading/total-profit-sharing` | Total profit sharing earned |
+| `getCopytradingUnrealizedProfit(params?)` | GET | `/api/v5/copytrading/unrealized-profit-sharing-details` | Unrealized profit sharing |
+| `applyCopytradingLeadTrading(params)` | POST | `/api/v5/copytrading/apply-lead-trading` | Apply to become a lead trader |
+| `stopCopytradingLeadTrading(params?)` | POST | `/api/v5/copytrading/stop-lead-trading` | Stop lead trading |
+| `updateCopytradingProfitSharing(params)` | POST | `/api/v5/copytrading/amend-profit-sharing-ratio` | Update profit sharing ratio |
+| `getCopytradingLeadPrivateRanks(params?)` | GET | `/api/v5/copytrading/lead-traders` | Your private lead trader ranking |
+| `geCopytradingLeadPrivateStats(params)` | GET | `/api/v5/copytrading/stats` | Your lead trader statistics |
+| `getCopytradingLeadPrivateOpenPositions(params)` | GET | `/api/v5/copytrading/performance-current-subpositions` | Your current lead positions |
+| `getCopyTradersPrivate(params)` | GET | `/api/v5/copytrading/copy-traders` | Your current copiers |
+
+## Examples
+
+### Discover lead traders
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient(); // no auth needed
+
+// Get top lead traders
+const ranks = await client.getCopytradingLeadRanks({
+  instType: 'SWAP',
+  sortType: '1',  // sort by PnL
+});
+
+for (const trader of ranks.slice(0, 5)) {
+  console.log(`Trader: ${trader.uniqueCode}`);
+  console.log(`  Win rate: ${trader.winRatio}`);
+  console.log(`  Copiers: ${trader.copyTraderNum}`);
+}
+```
+
+### Start copying a lead trader
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+await client.setCopytradingFirstCopy({
+  instType: 'SWAP',
+  uniqueCode: 'LEAD_TRADER_CODE',
+  copyMode: 'fixed_amount',
+  fixedAmt: '100',          // copy 100 USDT per trade
+  copyMgnMode: 'cross',
+  copyInstIdType: 'custom', // specify instruments
+  instIds: ['BTC-USDT-SWAP', 'ETH-USDT-SWAP'],
+});
+
+console.log('Now copying trader!');
+```
+
+### View your current copy positions
+
+```typescript
+const positions = await client.getCopytradingSubpositions();
+for (const pos of positions) {
+  console.log(`${pos.instId}: size=${pos.copyAmt}, PnL=${pos.pnl}`);
+}
+```
+
+### Close a copy position
+
+```typescript
+const [result] = await client.closeCopytradingSubposition({
+  subPosId: 'your-subposition-id',
+  instId: 'BTC-USDT-SWAP',
+  mgnMode: 'cross',
+});
+console.log('Closed subposition:', result.subPosId);
+```
+
+### Stop copying
+
+```typescript
+await client.stopCopytradingCopy({
+  instType: 'SWAP',
+  uniqueCode: 'LEAD_TRADER_CODE',
+  subPosCloseType: 'market_close', // market_close, copy_close, or manual_close
+});
+```

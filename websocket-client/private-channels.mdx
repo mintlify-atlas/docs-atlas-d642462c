@@ -1,0 +1,289 @@
+---
+title: Private Channels
+description: Subscribe to account updates, positions, orders, and fills with API credentials.
+---
+
+Private channels deliver account-level data including balances, positions, orders, and algorithmic orders. They require API credentials and the client handles authentication automatically on connection.
+
+## Configuration
+
+Provide your API credentials in the `accounts` array when constructing the client.
+
+```typescript
+import { DefaultLogger, WebsocketClient } from 'okx-api';
+
+const API_KEY = process.env.API_KEY_COM!;
+const API_SECRET = process.env.API_SECRET_COM!;
+const API_PASSPHRASE = process.env.API_PASSPHRASE_COM!;
+
+const wsClient = new WebsocketClient(
+  {
+    accounts: [
+      {
+        apiKey: API_KEY,
+        apiSecret: API_SECRET,
+        apiPass: API_PASSPHRASE,
+      },
+    ],
+  },
+  DefaultLogger,
+);
+```
+
+<Note>
+All three credential fields — `apiKey`, `apiSecret`, and `apiPass` — are required for authentication. Missing any of them will cause an error when the private connection is opened.
+</Note>
+
+## Auto-authentication
+
+Authentication is triggered automatically when the private WebSocket connection is established. You do not need to call any login method manually. When you call `subscribe()` with a private channel, the client:
+
+<Steps>
+  <Step title="Opens the connection">
+    The private WebSocket connection is opened if it is not already active.
+  </Step>
+  <Step title="Authenticates">
+    A signed login request is sent using your API credentials. The signature uses `timestamp + 'GET' + '/users/self/verify'` with HMAC-SHA256.
+  </Step>
+  <Step title="Subscribes">
+    Once authentication succeeds, the subscription request is sent.
+  </Step>
+</Steps>
+
+You can optionally call `connectPrivate()` early to warm up the connection before subscribing:
+
+```typescript
+// Optional: pre-connect to reduce latency on the first subscription
+wsClient.connectPrivate();
+```
+
+## Event listeners
+
+Set up all event listeners before subscribing.
+
+```typescript
+wsClient.on('update', (data) => {
+  console.log('ws update:', JSON.stringify(data));
+});
+
+wsClient.on('open', (data) => {
+  console.log('connection opened:', data.wsKey);
+});
+
+wsClient.on('response', (data) => {
+  console.log('ws response:', JSON.stringify(data));
+});
+
+wsClient.on('reconnect', ({ wsKey }) => {
+  console.log('ws automatically reconnecting....', wsKey);
+});
+
+wsClient.on('reconnected', (data) => {
+  console.log('ws has reconnected', data?.wsKey);
+});
+
+wsClient.on('exception', (data) => {
+  console.error('ws exception:', data);
+});
+```
+
+## Private channels
+
+### Account
+
+Streams changes to account balance and related information.
+
+```typescript
+// All currencies
+wsClient.subscribe({
+  channel: 'account',
+});
+
+// Specific currency only
+wsClient.subscribe({
+  channel: 'account',
+  ccy: 'BTC',
+});
+```
+
+### Positions
+
+```typescript
+// All instrument types
+wsClient.subscribe({
+  channel: 'positions',
+  instType: 'ANY',
+});
+
+// Specific instrument family and ID
+wsClient.subscribe({
+  channel: 'positions',
+  instType: 'SWAP',
+  instFamily: 'ETH-USD',
+  instId: 'ETH-USD-SWAP',
+});
+```
+
+### Balance and Position
+
+Combines balance and position data in one channel.
+
+```typescript
+wsClient.subscribe({
+  channel: 'balance_and_position',
+});
+```
+
+### Orders
+
+```typescript
+// All instrument types
+wsClient.subscribe({
+  channel: 'orders',
+  instType: 'ANY',
+});
+
+// Specific futures family
+wsClient.subscribe({
+  channel: 'orders',
+  instType: 'FUTURES',
+  instFamily: 'BTC-USD',
+});
+```
+
+### Algo Orders
+
+```typescript
+wsClient.subscribe({
+  channel: 'orders-algo',
+  instType: 'ANY',
+});
+
+// Advanced algo orders
+wsClient.subscribe({
+  channel: 'algo-advance',
+  instType: 'ANY',
+});
+```
+
+### Liquidation Warning
+
+```typescript
+wsClient.subscribe({
+  channel: 'liquidation-warning',
+  instType: 'ANY',
+});
+```
+
+### Account Greeks
+
+Options greeks for the account.
+
+```typescript
+wsClient.subscribe({
+  channel: 'account-greeks',
+});
+```
+
+### Withdrawal Info
+
+```typescript
+wsClient.subscribe({
+  channel: 'withdrawal-info',
+  ccy: 'BTC',
+});
+```
+
+### Grid Orders
+
+```typescript
+// Spot grid
+wsClient.subscribe({
+  channel: 'grid-orders-spot',
+  instType: 'SPOT',
+});
+
+// Contract grid
+wsClient.subscribe({
+  channel: 'grid-orders-contract',
+  instType: 'ANY',
+});
+
+// Moon grid
+wsClient.subscribe({
+  channel: 'grid-orders-moon',
+  instType: 'ANY',
+});
+
+// Grid positions for a specific algo
+wsClient.subscribe({
+  channel: 'grid-positions',
+  algoId: '449327675342323712',
+});
+
+// Grid sub-orders for a specific algo
+wsClient.subscribe({
+  channel: 'grid-sub-orders',
+  algoId: '449327675342323712',
+});
+```
+
+## Multiple accounts
+
+You can authenticate multiple accounts on a single `WebsocketClient` instance by adding more entries to the `accounts` array. Each account is authenticated independently and account-level data from all accounts arrives on the same `update` event.
+
+```typescript
+const wsClient = new WebsocketClient({
+  accounts: [
+    {
+      apiKey: process.env.ACCOUNT_1_KEY!,
+      apiSecret: process.env.ACCOUNT_1_SECRET!,
+      apiPass: process.env.ACCOUNT_1_PASS!,
+    },
+    {
+      apiKey: process.env.ACCOUNT_2_KEY!,
+      apiSecret: process.env.ACCOUNT_2_SECRET!,
+      apiPass: process.env.ACCOUNT_2_PASS!,
+    },
+  ],
+});
+```
+
+## Handling authentication failures
+
+Authentication errors arrive on the `exception` event. To prevent an infinite reconnect loop when credentials are invalid, close the connection explicitly:
+
+```typescript
+wsClient.on('exception', (data) => {
+  console.error('ws exception:', data);
+
+  const INVALID_API_KEY_ERROR = '60005';
+  if (data.event === 'error' && data.code === INVALID_API_KEY_ERROR) {
+    console.error('Detected auth failure - closing websocket');
+    wsClient.close(data.wsKey);
+  }
+});
+```
+
+<Warning>
+If you do not handle authentication errors, the client will attempt to reconnect automatically after each failure. With invalid credentials this creates a continuous reconnect loop. Always check for error code `60005` and close the connection if credentials are bad.
+</Warning>
+
+<Tip>
+Before establishing a private WebSocket connection, consider making a lightweight REST API call (such as fetching account balance) to verify your credentials are valid. This is safer than discovering bad credentials after the WebSocket connects.
+</Tip>
+
+## Batch subscriptions
+
+```typescript
+// Subscribe to multiple private channels in one call
+wsClient.subscribe([
+  {
+    channel: 'account',
+  },
+  {
+    channel: 'positions',
+    instType: 'ANY',
+  },
+]);
+```

@@ -1,0 +1,86 @@
+---
+title: "OKX API — Node.js SDK"
+description: "Complete Node.js & TypeScript SDK for OKX REST APIs and WebSockets"
+---
+
+<img
+  src="https://media.brand.dev/d0bd54b1-0a8c-48a1-8fc0-be53e565a398.png"
+  alt="OKX API SDK"
+  style={{ height: "60px", marginBottom: "1.5rem" }}
+/>
+
+# OKX API — Node.js SDK
+
+The `okx-api` package is a fully-featured, actively maintained Node.js and TypeScript SDK for interacting with the [OKX exchange](https://www.okx.com). It covers every endpoint in OKX's REST API and provides a robust, auto-reconnecting WebSocket client for real-time market data and private account streams.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the package and make your first API call in minutes
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Learn how to create and configure your OKX API credentials
+  </Card>
+  <Card title="REST Client" icon="server" href="/rest-client/overview">
+    Explore the full REST API — account, trading, funding and more
+  </Card>
+  <Card title="WebSocket Client" icon="bolt" href="/websocket-client/overview">
+    Subscribe to real-time streams with automatic reconnection
+  </Card>
+</CardGroup>
+
+## Why use this SDK?
+
+<CardGroup cols={2}>
+  <Card title="Complete REST coverage" icon="check">
+    Every OKX v5 REST endpoint is mapped to a typed TypeScript method — account, trading, funding, market data, earn, copy trading, grid trading, signal bots, block trading, and more.
+  </Card>
+  <Card title="Robust WebSockets" icon="wifi">
+    Automatic heartbeat detection, reconnection, re-authentication, and channel resubscription. Connections recover from failures without any extra code.
+  </Card>
+  <Card title="WebSocket API Client" icon="code">
+    Place, amend, and cancel orders via persistent WebSocket connections using a familiar promise-based interface — lower latency than REST.
+  </Card>
+  <Card title="Full TypeScript support" icon="file-code">
+    Type declarations for every request parameter and response object. Get IDE autocomplete and compile-time safety across the entire SDK.
+  </Card>
+  <Card title="Multi-region support" icon="globe">
+    Works with OKX Global (`www.okx.com`), OKX EEA (`my.okx.com`), and OKX US (`app.okx.com`) — just set the `market` option.
+  </Card>
+  <Card title="Browser compatible" icon="browser">
+    Comes with a webpack bundle for use in frontend applications. Works in any modern browser.
+  </Card>
+</CardGroup>
+
+## Key exports
+
+```typescript
+import {
+  RestClient,           // Full REST API client
+  WebsocketClient,      // Real-time WebSocket streams
+  WebsocketAPIClient,   // Promise-based WebSocket API (orders)
+} from 'okx-api';
+```
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install okx-api
+```
+```bash yarn
+yarn add okx-api
+```
+```bash pnpm
+pnpm add okx-api
+```
+</CodeGroup>
+
+## Community & support
+
+- **Issues & bugs** — [GitHub Issues](https://github.com/tiagosiebler/okx-api/issues)
+- **Discussion** — [Node.js Algo Traders on Telegram](https://t.me/nodetraders)
+- **Announcements** — [@sieblyio on X/Twitter](https://x.com/sieblyio)
+
+<Note>
+  This SDK is part of the [Siebly.io](https://siebly.io) family of exchange SDKs. Related packages are available for Bybit, Binance, Gate, Bitget, KuCoin, Coinbase, and more.
+</Note>

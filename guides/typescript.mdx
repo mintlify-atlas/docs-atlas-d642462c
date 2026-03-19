@@ -1,0 +1,179 @@
+---
+title: TypeScript
+description: Get the most out of the okx-api SDK with TypeScript — typed requests, typed responses, and IDE autocomplete for every endpoint.
+---
+
+The SDK is written in TypeScript and ships with full type declarations. Every client method has typed parameters and return types, giving you compile-time safety and IDE autocomplete out of the box.
+
+## Type declarations included
+
+No `@types/` package is needed. When you install `okx-api`, the type declarations are included automatically:
+
+```bash
+npm install okx-api
+```
+
+The SDK's types live under `src/types/` and are exported from the package root, so you can import them directly.
+
+## Typed REST requests
+
+Every request parameter object has a corresponding TypeScript interface. Import and annotate your variables to get inline documentation and catch mistakes at compile time.
+
+### Typed order submission
+
+```typescript
+import { RestClient } from 'okx-api';
+import { OrderRequest } from 'okx-api/src/types/rest/request/trade';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY_COM,
+  apiSecret: process.env.API_SECRET_COM,
+  apiPass: process.env.API_PASS_COM,
+});
+
+(async () => {
+  // TypeScript enforces the correct shape of the order object
+  const order: OrderRequest = {
+    instId: 'BTC-USDT',
+    ordType: 'market',
+    side: 'buy',
+    sz: '0.002',
+    tdMode: 'cash',
+    tgtCcy: 'base_ccy',
+  };
+
+  const result = await client.submitOrder(order);
+  console.log('Order result:', result);
+})();
+```
+
+The `OrderRequest` interface captures all available fields including optional ones:
+
+```typescript
+export interface OrderRequest {
+  instId: string;
+  tdMode: TradeMode;        // 'cross' | 'isolated' | 'cash' | 'spot_isolated'
+  side: OrderSide;          // 'buy' | 'sell'
+  ordType: OrderType;       // 'market' | 'limit' | 'post_only' | 'fok' | 'ioc' | ...
+  sz: numberInString;       // quantity as a string
+  ccy?: string;
+  clOrdId?: string;
+  tag?: string;
+  posSide?: PositionSide;   // 'net' | 'long' | 'short'
+  px?: string;
+  pxUsd?: string;
+  pxVol?: string;
+  reduceOnly?: boolean;
+  tgtCcy?: string;
+  // ...and more
+}
+```
+
+## Typed REST responses
+
+Return types are inferred automatically — no casting needed. Your IDE will offer autocomplete on every response field.
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY_COM,
+  apiSecret: process.env.API_SECRET_COM,
+  apiPass: process.env.API_PASS_COM,
+});
+
+(async () => {
+  // `allBalances` is fully typed — hover over it in your IDE
+  const allBalances = await client.getBalance();
+
+  // TypeScript knows the shape of each balance entry
+  const usdtBalance = allBalances[0].details.find(
+    (bal) => bal.ccy === 'USDT',
+  );
+
+  console.log('USDT available:', usdtBalance?.availBal);
+})();
+```
+
+## Typed WebSocket event handling
+
+The `WebsocketClient` is event-driven. Subscription data arrives on the `'update'` event.
+
+```typescript
+import { WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient({
+  accounts: [
+    {
+      apiKey: process.env.API_KEY_COM,
+      apiSecret: process.env.API_SECRET_COM,
+      apiPass: process.env.API_PASSPHRASE_COM,
+    },
+  ],
+});
+
+wsClient.on('update', (data) => {
+  console.log('ws update (raw data received)', JSON.stringify(data));
+});
+
+wsClient.on('response', (data) => {
+  console.log('ws response: ', JSON.stringify(data));
+});
+
+wsClient.on('exception', (data) => {
+  console.error('ws exception: ', data);
+});
+
+// Subscribe — TypeScript validates the channel shape
+wsClient.subscribe([
+  { channel: 'account' },
+  { channel: 'positions', instType: 'ANY' },
+]);
+```
+
+## Shared type utilities
+
+The SDK exports a collection of shared types for common OKX concepts. Import them to type your own application code:
+
+```typescript
+import type {
+  OrderSide,       // 'buy' | 'sell'
+  OrderType,       // 'market' | 'limit' | 'post_only' | 'fok' | 'ioc' | ...
+  OrderState,      // 'canceled' | 'live' | 'partially_filled' | 'filled' | ...
+  TradeMode,       // 'cross' | 'isolated' | 'cash' | 'spot_isolated'
+  InstrumentType,  // 'SPOT' | 'MARGIN' | 'SWAP' | 'FUTURES' | 'OPTION'
+  MarginMode,      // 'cross' | 'isolated'
+  PositionSide,    // 'net' | 'long' | 'short'
+  AlgoOrderType,   // 'conditional' | 'oco' | 'trigger' | 'move_order_stop' | ...
+} from 'okx-api';
+```
+
+## Client options types
+
+Both clients export their options interfaces for use in factory functions or dependency injection:
+
+```typescript
+import type { RestClientOptions } from 'okx-api';
+import type { WSClientConfigurableOptions } from 'okx-api';
+
+function createClient(opts: RestClientOptions) {
+  return new RestClient(opts);
+}
+```
+
+## Tips for maximum IDE benefit
+
+<CardGroup cols={2}>
+  <Card title="Use IntelliSense" icon="wand-magic-sparkles">
+    Hover over any client method in VSCode to see its parameter types and return type inline, without consulting external docs.
+  </Card>
+  <Card title="Annotate your variables" icon="tag">
+    Explicitly typing request objects (e.g. `const order: OrderRequest = { ... }`) triggers IntelliSense suggestions for every available field.
+  </Card>
+  <Card title="Strict mode" icon="shield-check">
+    Enable `strict_param_validation: true` in `RestClientOptions` to have the SDK throw at runtime if any parameters are `undefined`.
+  </Card>
+  <Card title="Go to definition" icon="arrow-right">
+    Use your IDE's "Go to Definition" on any SDK type to browse the full interface directly in `src/types/`.
+  </Card>
+</CardGroup>

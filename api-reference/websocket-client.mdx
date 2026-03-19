@@ -1,0 +1,340 @@
+---
+title: 'WebsocketClient'
+description: 'Complete API reference for the WebsocketClient class — constructor, methods, and events.'
+---
+
+## Overview
+
+`WebsocketClient` is the primary class for subscribing to OKX WebSocket channels and for making WebSocket API (WS API) requests. It extends `BaseWebsocketClient` and emits typed events for connection lifecycle and market data updates.
+
+```typescript
+import { WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient({
+  accounts: [
+    {
+      apiKey: 'YOUR_API_KEY',
+      apiSecret: 'YOUR_API_SECRET',
+      apiPass: 'YOUR_API_PASSPHRASE',
+    },
+  ],
+});
+
+wsClient.on('update', (data) => {
+  console.log('data update', data);
+});
+
+wsClient.on('open', (data) => {
+  console.log('connection opened', data.wsKey);
+});
+
+wsClient.subscribe({ channel: 'tickers', instId: 'BTC-USDT' });
+```
+
+---
+
+## Constructor
+
+```typescript
+new WebsocketClient(
+  options?: WSClientConfigurableOptions,
+  logger?: DefaultLogger
+)
+```
+
+<ParamField body="options" type="WSClientConfigurableOptions">
+  Optional configuration object. See options below.
+</ParamField>
+
+<ParamField body="logger" type="DefaultLogger">
+  Optional custom logger. Defaults to the built-in console logger.
+</ParamField>
+
+### Constructor options (`WSClientConfigurableOptions`)
+
+<ParamField body="accounts" type="APICredentials[]">
+  Array of API credential objects, each with `apiKey`, `apiSecret`, and `apiPass`. Providing credentials enables authentication for private channels and WS API calls.
+</ParamField>
+
+<ParamField body="market" type="string" default="prod">
+  The API group to connect to:
+  - `'prod'` — OKX global (`wss://ws.okx.com`)
+  - `'EEA'` — European Economic Area (`wss://wspap.okx.com`)
+  - `'US'` — United States (`wss://wsaws.okx.com`)
+</ParamField>
+
+<ParamField body="demoTrading" type="boolean" default="false">
+  Set to `true` to connect to OKX demo trading WebSocket endpoints.
+</ParamField>
+
+<ParamField body="disableHeartbeat" type="boolean" default="false">
+  Disable the ping/pong heartbeat mechanism. Not recommended — OKX requires heartbeats to keep connections alive.
+</ParamField>
+
+<ParamField body="pingInterval" type="number">
+  How often (ms) to check that the connection is alive by sending a ping.
+</ParamField>
+
+<ParamField body="pongTimeout" type="number">
+  How long (ms) to wait for a pong response before treating the connection as dead and reconnecting.
+</ParamField>
+
+<ParamField body="reconnectTimeout" type="number">
+  Delay (ms) before spawning a new connection after a disconnect.
+</ParamField>
+
+<ParamField body="requestOptions" type="RestClientOptions">
+  Options forwarded to the underlying `RestClient` used for time synchronisation.
+</ParamField>
+
+<ParamField body="wsOptions" type="object">
+  Additional options passed directly to the underlying `isomorphic-ws` WebSocket constructor, such as `protocols` or `agent`.
+</ParamField>
+
+<ParamField body="wsUrl" type="string">
+  Override the WebSocket URL entirely.
+</ParamField>
+
+<ParamField body="customSignMessageFn" type="(message: string, secret: string) => Promise<string>">
+  Provide a custom HMAC signing function for authentication. Useful for using Node's native `crypto.createHmac`.
+</ParamField>
+
+---
+
+## Methods
+
+### Connection management
+
+#### `connectAll()`
+
+```typescript
+connectAll(): Promise<WSConnectedResult | undefined>[]
+```
+
+Requests connection of all dependent public and private WebSockets at once, rather than waiting for the library to connect automatically on the first subscription.
+
+Returns an array of two promises: one for the public connection and one for the private connection.
+
+---
+
+#### `connectPublic(businessEndpoint?)`
+
+```typescript
+connectPublic(businessEndpoint?: boolean): Promise<WSConnectedResult | undefined>
+```
+
+Connect to the public WebSocket endpoint.
+
+<ParamField body="businessEndpoint" type="boolean">
+  When `true`, connects to the business WebSocket endpoint instead of the standard public one.
+</ParamField>
+
+---
+
+#### `connectPrivate(businessEndpoint?)`
+
+```typescript
+connectPrivate(businessEndpoint?: boolean): Promise<WSConnectedResult | undefined>
+```
+
+Connect to the private (authenticated) WebSocket endpoint.
+
+<ParamField body="businessEndpoint" type="boolean">
+  When `true`, connects to the business WebSocket endpoint.
+</ParamField>
+
+---
+
+#### `connectWSAPI()`
+
+```typescript
+connectWSAPI(): Promise<unknown[]>
+```
+
+Ensures both the private and business WebSocket connections are active and authenticated. Call this before making WS API requests to pre-warm the connection and reduce latency on the first request.
+
+---
+
+### Subscriptions
+
+#### `subscribe(wsEvents, isPrivateTopic?)`
+
+```typescript
+subscribe(
+  wsEvents: WsChannelSubUnSubRequestArg[] | WsChannelSubUnSubRequestArg,
+  isPrivateTopic?: boolean
+): Promise<unknown>[]
+```
+
+Subscribe to one or more WebSocket channels. Subscriptions are tracked and automatically re-subscribed if the connection drops and reconnects.
+
+<ParamField body="wsEvents" type="WsChannelSubUnSubRequestArg | WsChannelSubUnSubRequestArg[]">
+  A single channel subscription object or an array of them. Each object must include a `channel` property, plus any channel-specific parameters (e.g. `instId`).
+</ParamField>
+
+<ParamField body="isPrivateTopic" type="boolean">
+  Optional hint to force the library to treat a channel as private. The library auto-detects most private channels; only set this if a channel is not yet recognised.
+</ParamField>
+
+Returns an array of promises, one per unique WebSocket connection used.
+
+**Example:**
+
+```typescript
+// Subscribe to a single public channel
+wsClient.subscribe({ channel: 'tickers', instId: 'BTC-USDT' });
+
+// Subscribe to multiple channels at once
+wsClient.subscribe([
+  { channel: 'tickers', instId: 'BTC-USDT' },
+  { channel: 'tickers', instId: 'ETH-USDT' },
+]);
+
+// Subscribe to a private channel
+wsClient.subscribe({ channel: 'orders', instType: 'ANY' });
+```
+
+---
+
+#### `unsubscribe(wsEvents, isPrivateTopic?)`
+
+```typescript
+unsubscribe(
+  wsEvents: WsChannelSubUnSubRequestArg[] | WsChannelSubUnSubRequestArg,
+  isPrivateTopic?: boolean
+): Promise<unknown>[]
+```
+
+Unsubscribe from one or more channels. The subscription is removed from memory and will not be re-subscribed on reconnection.
+
+<ParamField body="wsEvents" type="WsChannelSubUnSubRequestArg | WsChannelSubUnSubRequestArg[]">
+  The channel(s) to unsubscribe from. Must match the arguments used when subscribing.
+</ParamField>
+
+<ParamField body="isPrivateTopic" type="boolean">
+  Optional private topic hint, same as in `subscribe()`.
+</ParamField>
+
+---
+
+### WebSocket API
+
+#### `sendWSAPIRequest(wsKey, operation, params, requestFlags?)`
+
+```typescript
+sendWSAPIRequest<TWSKey, TWSOperation, TWSParams, TWSAPIResponse>(
+  wsKey: WsKey,
+  operation: TWSOperation,
+  params: TWSParams & { signRequest?: boolean },
+  requestFlags?: WSAPIRequestFlags
+): Promise<TWSAPIResponse>
+```
+
+Send a request over the WebSocket API. This is a lower-level method — for most use cases, prefer the higher-level [`WebsocketAPIClient`](/api-reference/websocket-api-client).
+
+The method ensures the connection is active and authenticated before sending, then returns a promise that resolves or rejects when the matching response arrives.
+
+<ParamField body="wsKey" type="WsKey">
+  The WebSocket key identifying which connection to use. Use `getMarketWsKey('private')` or `getMarketWsKey('business')` to obtain the correct key.
+</ParamField>
+
+<ParamField body="operation" type="string">
+  The WS API operation name (e.g. `'order'`, `'cancel-order'`, `'batch-orders'`).
+</ParamField>
+
+<ParamField body="params" type="object">
+  Parameters for the operation. The shape is typed based on the operation.
+</ParamField>
+
+<ParamField body="requestFlags" type="WSAPIRequestFlags">
+  Optional flags to control request behaviour, such as `expTime` and `authIsOptional`.
+</ParamField>
+
+**Example:**
+
+```typescript
+const response = await wsClient.sendWSAPIRequest(
+  wsClient.getMarketWsKey('private'),
+  'order',
+  {
+    instId: 'BTC-USDT',
+    tdMode: 'cash',
+    side: 'buy',
+    ordType: 'market',
+    sz: '0.01',
+  },
+);
+```
+
+---
+
+#### `getMarketWsKey(type)`
+
+```typescript
+getMarketWsKey(type: 'private' | 'business'): WsKey
+```
+
+Returns the correct `WsKey` for the active market (prod / EEA / US) and the given connection type. Used when calling `sendWSAPIRequest()` directly.
+
+<ParamField body="type" type="string">
+  `'private'` for order management and account data, or `'business'` for spread trading and other business-line WS API operations.
+</ParamField>
+
+---
+
+### Utility
+
+#### `setTimeOffsetMs(offsetMs)`
+
+```typescript
+setTimeOffsetMs(offsetMs: number): void
+```
+
+Manually set the time offset (ms) between the local clock and the OKX server clock. The client uses this to generate valid authentication timestamps. Normally the SDK handles this automatically.
+
+---
+
+## Events
+
+Listen to events using the `on()` method:
+
+```typescript
+wsClient.on('eventName', (data) => { ... });
+```
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `open` | `{ wsKey: WsKey }` | A WebSocket connection has been opened. |
+| `reconnect` | `{ wsKey: WsKey }` | The client is attempting to reconnect after a disconnect. |
+| `reconnected` | `{ wsKey: WsKey }` | The client has successfully reconnected. |
+| `authenticated` | `{ wsKey: WsKey }` | A private connection has been successfully authenticated. |
+| `update` | `WsDataEvent & { wsKey: WsKey }` | A data update was received on a subscribed channel. |
+| `response` | `object & { wsKey: WsKey }` | A response to a subscribe, unsubscribe, or WS API request was received. |
+| `exception` | `object & { wsKey: WsKey }` | An error event was received from the server, or an internal error occurred. |
+| `close` | `{ wsKey: WsKey }` | A WebSocket connection has closed. |
+
+### Handling `update` events
+
+All channel data arrives via the `update` event. Use the `wsKey` and `arg.channel` properties to route messages:
+
+```typescript
+wsClient.on('update', (data) => {
+  const channel = data?.arg?.channel;
+
+  if (channel === 'tickers') {
+    console.log('ticker update', data.data);
+  }
+
+  if (channel === 'orders') {
+    console.log('order update', data.data);
+  }
+});
+```
+
+### Handling errors
+
+```typescript
+wsClient.on('exception', (data) => {
+  console.error('WebSocket error', data);
+});
+```

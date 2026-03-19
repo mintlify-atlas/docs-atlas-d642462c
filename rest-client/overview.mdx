@@ -1,0 +1,132 @@
+---
+title: 'REST Client'
+description: 'The RestClient class provides access to all OKX REST API endpoints, covering trading, account management, market data, and more.'
+---
+
+## Overview
+
+The `RestClient` class maps every OKX REST API endpoint to a typed TypeScript method. Public endpoints work without credentials. Private endpoints require an API key, secret, and passphrase.
+
+## Installation
+
+```bash
+npm install okx-api
+```
+
+## Instantiation
+
+```typescript
+import { RestClient } from 'okx-api';
+
+// Public endpoints only (no credentials required)
+const publicClient = new RestClient();
+
+// Private + public endpoints
+const client = new RestClient({
+  apiKey: 'your-api-key',
+  apiSecret: 'your-api-secret',
+  apiPass: 'your-api-passphrase',
+});
+```
+
+### Constructor options
+
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `apiKey` | `string` | No | API key from OKX. Required for private endpoints. |
+| `apiSecret` | `string` | No | API secret from OKX. Required for private endpoints. |
+| `apiPass` | `string` | No | API passphrase set when creating the key. Required for private endpoints. |
+| `demoTrading` | `boolean` | No | Set to `true` to use the OKX demo trading environment. |
+| `baseUrl` | `string` | No | Override the default REST base URL. |
+| `timeout` | `number` | No | Request timeout in milliseconds. Default is `10000`. |
+
+## Request and response pattern
+
+All methods return a `Promise` that resolves to an array of typed response objects. The SDK automatically unwraps the OKX `{ code, msg, data }` envelope — when `code === '0'` the promise resolves with `data`; any non-zero code causes the promise to reject with an error.
+
+```typescript
+// The promise resolves with AccountBalance[] directly
+const balances = await client.getBalance();
+console.log(balances[0].totalEq); // e.g. '1234.56'
+```
+
+## Error handling
+
+When OKX returns a non-zero error code, or a network error occurs, the SDK throws. Wrap calls in `try/catch`:
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+try {
+  const positions = await client.getPositions();
+  console.log('Open positions:', positions.length);
+} catch (err) {
+  // err.body contains the raw OKX error response
+  console.error('OKX error:', err);
+}
+```
+
+<Note>
+The SDK never silently swallows errors. If `code !== '0'` the returned data is thrown as the error, giving you the full OKX error object.
+</Note>
+
+## Latency utility
+
+The client exposes a helper to measure round-trip latency and clock skew between your machine and OKX servers:
+
+```typescript
+const result = await client.fetchLatencySummary();
+console.log(`Round trip: ${result.roundTripTime}ms`);
+console.log(`Clock skew: ${result.timeDifference}ms`);
+```
+
+<Warning>
+If `timeDifference` exceeds 500 ms your requests may be rejected by OKX due to timestamp validation. Synchronize your system clock.
+</Warning>
+
+## Available sections
+
+<CardGroup cols={2}>
+  <Card title="Account" icon="user" href="/rest-client/account">
+    Balances, positions, leverage, fee rates, and account configuration.
+  </Card>
+  <Card title="Trading" icon="arrow-right-left" href="/rest-client/trading">
+    Place, cancel, and amend orders. Query order history and fills.
+  </Card>
+  <Card title="Funding" icon="building-columns" href="/rest-client/funding">
+    Deposits, withdrawals, transfers, and currency conversion.
+  </Card>
+  <Card title="Market Data" icon="chart-line" href="/rest-client/market-data">
+    Public tickers, candles, order books, and funding rates.
+  </Card>
+  <Card title="Sub-accounts" icon="users" href="/rest-client/subaccounts">
+    Manage sub-accounts, balances, and inter-account transfers.
+  </Card>
+  <Card title="Earn & Finance" icon="piggy-bank" href="/rest-client/earn-finance">
+    Staking, savings, ETH staking, and fixed/flexible lending.
+  </Card>
+  <Card title="Copy Trading" icon="copy" href="/rest-client/copy-trading">
+    Lead-trader and copy-trader management, positions, and profit sharing.
+  </Card>
+  <Card title="Grid Trading" icon="grid-3x3" href="/rest-client/grid-trading">
+    Create and manage spot, futures, and contract grid bots.
+  </Card>
+  <Card title="Signal Bots" icon="signal" href="/rest-client/signal-bots">
+    Create signal sources, deploy bots, and manage sub-orders.
+  </Card>
+  <Card title="Block Trading" icon="layer-group" href="/rest-client/block-trading">
+    RFQ creation, quote management, and block trade execution.
+  </Card>
+  <Card title="Spread Trading" icon="code-branch" href="/rest-client/spread-trading">
+    Submit and manage spread orders and query spread market data.
+  </Card>
+  <Card title="Recurring Buy" icon="rotate" href="/rest-client/recurring-buy">
+    Set up, amend, and track recurring DCA purchase orders.
+  </Card>
+</CardGroup>

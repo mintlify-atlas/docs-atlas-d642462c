@@ -1,0 +1,274 @@
+---
+title: Event Handling
+description: Full reference for all WebSocket events emitted by the client, their TypeScript types, and best practices for structuring handlers.
+---
+
+The `WebsocketClient` extends Node.js `EventEmitter`. All activity — incoming data, connection lifecycle, and errors — is surfaced through named events. Attach listeners with `.on()` before calling `subscribe()`.
+
+## Event summary
+
+| Event | When it fires |
+|-------|---------------|
+| `update` | A subscribed channel pushes new data |
+| `response` | A subscribe, unsubscribe, or auth confirmation is received |
+| `open` | A WebSocket connection is opened |
+| `reconnect` | A reconnection attempt is about to begin |
+| `reconnected` | A reconnection attempt succeeded |
+| `exception` | An error message is received or authentication fails |
+| `authenticated` | Authentication on a private connection succeeded |
+
+## `update`
+
+Fires for every incoming data message from a subscribed channel.
+
+```typescript
+wsClient.on('update', (data) => {
+  console.log(new Date(), 'ws update (raw data received)', JSON.stringify(data));
+});
+```
+
+**Payload type:**
+
+```typescript
+interface WsDataEvent<T = any> {
+  arg: {
+    channel: WsChannel;
+    uid?: string;
+    instId?: string;
+    instFamily?: string;
+  };
+  data: T;
+  wsKey: WsKey; // added by the client before emitting
+}
+```
+
+- `arg.channel` — the channel name that produced this update (e.g. `'tickers'`, `'trades'`, `'account'`).
+- `data` — the array of records in this update, shaped according to the channel.
+- `wsKey` — identifies the underlying connection (e.g. `'prodPublic'`, `'prodPrivate'`).
+
+**Routing updates by channel:**
+
+```typescript
+wsClient.on('update', (data) => {
+  switch (data.arg.channel) {
+    case 'tickers':
+      handleTicker(data.data);
+      break;
+    case 'trades':
+      handleTrades(data.data);
+      break;
+    case 'account':
+      handleAccountUpdate(data.data);
+      break;
+    case 'positions':
+      handlePositions(data.data);
+      break;
+    default:
+      console.log(`Unhandled channel: ${data.arg.channel}`);
+  }
+});
+```
+
+## `response`
+
+Fires when the server acknowledges a subscribe, unsubscribe, or login request. Also fires for WS API operation results.
+
+```typescript
+wsClient.on('response', (data) => {
+  console.log('ws response received:', JSON.stringify(data, null, 2));
+});
+```
+
+**Payload type:**
+
+```typescript
+interface WsEvent {
+  event: 'error' | 'login' | 'subscribe' | 'unsubscribe' | 'channel-conn-count';
+  code?: string;
+  msg?: string;
+  arg?: any;
+  data?: any;
+  wsKey: WsKey; // added by the client
+}
+```
+
+A successful subscription confirmation looks like:
+
+```json
+{
+  "event": "subscribe",
+  "arg": {
+    "channel": "tickers",
+    "instId": "BTC-USDT"
+  },
+  "wsKey": "prodPublic"
+}
+```
+
+## `open`
+
+Fires each time a WebSocket connection is first established (including after reconnections).
+
+```typescript
+wsClient.on('open', (data) => {
+  console.log('ws connection opened:', data.wsKey);
+});
+```
+
+**Payload:**
+
+```typescript
+{ wsKey: WsKey }
+```
+
+## `reconnect`
+
+Fires when the client detects a dropped connection and is about to attempt reconnection. The connection is not yet restored at this point.
+
+```typescript
+wsClient.on('reconnect', ({ wsKey }) => {
+  console.log('ws automatically reconnecting....', wsKey);
+});
+```
+
+**Payload:**
+
+```typescript
+{ wsKey: WsKey }
+```
+
+## `reconnected`
+
+Fires after a reconnection attempt succeeds and the connection is re-established. At this point the client has also re-authenticated (if required) and resubscribed all active topics.
+
+```typescript
+wsClient.on('reconnected', (data) => {
+  console.log('ws has reconnected', data?.wsKey);
+});
+```
+
+**Payload:**
+
+```typescript
+{ wsKey: WsKey }
+```
+
+## `exception`
+
+Fires when an error message is received from the server, when authentication fails, or when a WS API operation returns a non-zero error code.
+
+```typescript
+wsClient.on('exception', (data) => {
+  console.error('ws exception:', data);
+});
+```
+
+**Payload type:**
+
+```typescript
+interface WsEvent {
+  event: 'error' | 'login' | 'subscribe' | 'unsubscribe' | 'channel-conn-count';
+  code?: string;
+  msg?: string;
+  arg?: any;
+  data?: any;
+  wsKey: WsKey;
+}
+```
+
+Common error codes:
+
+| Code | Meaning |
+|------|---------|
+| `60005` | Invalid API key |
+| `60009` | Login failed |
+| `60011` | Already authenticated |
+
+## `authenticated`
+
+Fires after a private connection successfully authenticates. Useful for performing actions that depend on auth being complete.
+
+```typescript
+wsClient.on('authenticated', (data) => {
+  console.log('authenticated on:', data.wsKey);
+});
+```
+
+## TypeScript types
+
+The full set of event types is expressed via `WSClientEventMap`:
+
+```typescript
+import type { WsKey } from 'okx-api';
+
+// WsDataEvent — emitted on 'update'
+import type { WsDataEvent } from 'okx-api'; // src/types/websockets/ws-events.ts
+
+// WsEvent — emitted on 'response' and 'exception'
+import type { WsResponse } from 'okx-api'; // src/types/websockets/ws-events.ts
+```
+
+The `WebsocketClient.on()` method is fully typed. TypeScript will infer the correct payload shape based on the event name:
+
+```typescript
+import { WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient();
+
+// data is inferred as WsDataEvent
+wsClient.on('update', (data) => {
+  // data.arg.channel is typed as WsChannel
+  // data.data is typed as any (channel-specific)
+});
+
+// data is inferred as WsEvent
+wsClient.on('response', (data) => {
+  // data.event is 'subscribe' | 'unsubscribe' | 'login' | ...
+});
+```
+
+## Complete handler example
+
+This is the canonical event listener setup from the public channel example:
+
+```typescript
+import { DefaultLogger, WebsocketClient } from 'okx-api';
+
+const logger = {
+  ...DefaultLogger,
+};
+
+const wsClient = new WebsocketClient({}, logger);
+
+wsClient.on('update', (data) => {
+  console.log(new Date(), 'ws update (raw data received)', JSON.stringify(data));
+});
+
+wsClient.on('open', (data) => {
+  console.log('ws connection opened:', data.wsKey);
+});
+
+wsClient.on('response', (data) => {
+  console.log('ws response received:', JSON.stringify(data, null, 2));
+});
+
+wsClient.on('reconnect', ({ wsKey }) => {
+  console.log('ws automatically reconnecting....', wsKey);
+});
+
+wsClient.on('reconnected', (data) => {
+  console.log('ws has reconnected', data?.wsKey);
+});
+
+wsClient.on('exception', (data) => {
+  console.error('ws exception:', data);
+});
+```
+
+## Best practices
+
+- **Register all listeners before subscribing.** Subscribing may open the connection immediately, and events can arrive before you attach handlers.
+- **Route in `update` by `data.arg.channel`.** A single client can hold many subscriptions; switching on the channel name keeps your handler readable.
+- **Always handle `exception`.** Unhandled exceptions are logged but not thrown. Ignoring auth errors will result in a reconnect loop with invalid credentials.
+- **Use `response` for confirmation, not `update`.** The `response` event confirms that a subscription or auth request was accepted. Channel data only flows on `update`.
+- **Use `reconnected` to verify state.** After a reconnection all subscriptions are automatically restored, but if your application maintains derived state (e.g. an in-memory order book) you may need to reset it using the snapshot that arrives after resubscription.

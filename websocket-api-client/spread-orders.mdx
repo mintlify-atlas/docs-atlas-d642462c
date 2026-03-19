@@ -1,0 +1,254 @@
+---
+title: "Spread orders"
+description: "Place, amend, and cancel spread trading orders over the WebSocket API using the business channel."
+---
+
+Spread trading operations use the OKX **business** WebSocket channel (`/ws/v5/business`), which is separate from the private channel used for regular order management. `WebsocketAPIClient` routes spread methods to the correct channel automatically.
+
+<Note>
+  Spread trading is available on the global OKX platform (`www.okx.com`). Make sure
+  your account has spread trading enabled before using these methods.
+</Note>
+
+## submitSpreadOrder()
+
+Place a new spread order.
+
+```typescript
+submitSpreadOrder(
+  params: WSAPIPlaceSpreadOrderRequestV5,
+): Promise<WSAPIResponse<[WSAPISpreadPlaceOrderResultV5], 'sprd-order'>>
+```
+
+### Parameters
+
+```typescript
+interface WSAPIPlaceSpreadOrderRequestV5 {
+  sprdId: string;           // Spread instrument ID (required)
+  side: OrderSide;          // 'buy' or 'sell' (required)
+  ordType: OrderType;       // Order type, e.g. 'limit' or 'market' (required)
+  sz: numberInString;       // Quantity as a numeric string (required)
+  px?: numberInString;      // Limit price
+  clOrdId?: string;         // Client-assigned order ID (max 32 chars)
+  tag?: string;             // Order tag
+}
+```
+
+### Response
+
+```typescript
+interface WSAPISpreadPlaceOrderResultV5 {
+  clOrdId: string;          // Client order ID
+  ordId: string;            // Exchange-assigned order ID
+  tag: string;              // Order tag
+  sCode: numberInString;    // '0' = success
+  sMsg: string;             // Error description if sCode !== '0'
+}
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.submitSpreadOrder({
+    sprdId: 'BTC-USDT_BTC-USDT-SWAP',
+    side: 'buy',
+    ordType: 'limit',
+    sz: '1',
+    px: '100',
+    clOrdId: 'spread-order-001',
+  });
+
+  const result = res.data[0];
+  if (String(result.sCode) === '0') {
+    console.log('Spread order placed. ordId:', result.ordId);
+  } else {
+    console.error('Spread order rejected:', result.sCode, result.sMsg);
+  }
+} catch (e) {
+  console.error('Spread order request failed:', e);
+}
+```
+
+---
+
+## amendSpreadOrder()
+
+Amend the price or quantity of an open spread order.
+
+```typescript
+amendSpreadOrder(
+  params: WSAPIAmendSpreadOrderRequestV5,
+): Promise<WSAPIResponse<[WSAPISpreadAmendOrderResultV5], 'sprd-amend-order'>>
+```
+
+### Parameters
+
+```typescript
+interface WSAPIAmendSpreadOrderRequestV5 {
+  ordId?: string;    // Exchange order ID (ordId or clOrdId required)
+  clOrdId?: string;  // Client order ID
+  reqId?: string;    // Client-supplied request tracking ID
+  newSz?: string;    // New quantity
+  newPx?: string;    // New price
+}
+```
+
+### Response
+
+```typescript
+interface WSAPISpreadAmendOrderResultV5 {
+  clOrdId: string;  // Client order ID
+  ordId: string;    // Exchange order ID
+  reqId: string;    // Request ID (echoed from the request)
+  sCode: string;    // '0' = success
+  sMsg: string;     // Error description if sCode !== '0'
+}
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.amendSpreadOrder({
+    ordId: '1234567890',
+    newPx: '105',
+    newSz: '2',
+  });
+
+  const result = res.data[0];
+  if (result.sCode === '0') {
+    console.log('Spread order amended:', result.ordId);
+  } else {
+    console.error('Amend failed:', result.sCode, result.sMsg);
+  }
+} catch (e) {
+  console.error('Spread amend request failed:', e);
+}
+```
+
+---
+
+## cancelSpreadOrder()
+
+Cancel an open spread order by order ID or client order ID.
+
+```typescript
+cancelSpreadOrder(
+  params: WSAPICancelSpreadOrderRequestV5,
+): Promise<WSAPIResponse<[WSAPISpreadCancelOrderResultV5], 'sprd-cancel-order'>>
+```
+
+### Parameters
+
+```typescript
+interface WSAPICancelSpreadOrderRequestV5 {
+  ordId?: string;    // Exchange order ID (ordId or clOrdId required)
+  clOrdId?: string;  // Client order ID
+}
+```
+
+### Response
+
+```typescript
+interface WSAPISpreadCancelOrderResultV5 {
+  clOrdId: string;  // Client order ID
+  ordId: string;    // Exchange order ID
+  sCode: string;    // '0' = success
+  sMsg: string;     // Error description if sCode !== '0'
+}
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.cancelSpreadOrder({
+    ordId: '1234567890',
+  });
+
+  const result = res.data[0];
+  if (result.sCode === '0') {
+    console.log('Spread order cancelled:', result.ordId);
+  } else {
+    console.error('Cancel failed:', result.sCode, result.sMsg);
+  }
+} catch (e) {
+  console.error('Spread cancel request failed:', e);
+}
+```
+
+---
+
+## massCancelSpreadOrders()
+
+Cancel all open spread orders, optionally filtered by spread instrument ID.
+
+```typescript
+massCancelSpreadOrders(
+  params: WSAPISpreadMassCancelOrdersRequestV5,
+): Promise<WSAPIResponse<[{ result: boolean }], 'sprd-mass-cancel'>>
+```
+
+### Parameters
+
+```typescript
+interface WSAPISpreadMassCancelOrdersRequestV5 {
+  sprdId?: string;  // Spread ID to cancel orders for. Omit to cancel all spread orders.
+}
+```
+
+The response `data[0].result` is `true` when the mass cancel was accepted.
+
+<Warning>
+  Omitting `sprdId` cancels **all** open spread orders on your account.
+  This cannot be undone.
+</Warning>
+
+### Example
+
+```typescript
+try {
+  // Cancel all orders on a specific spread
+  const res = await wsClient.massCancelSpreadOrders({
+    sprdId: 'BTC-USDT_BTC-USDT-SWAP',
+  });
+
+  if (res.data[0].result) {
+    console.log('All spread orders cancelled.');
+  } else {
+    console.error('Mass cancel failed:', res.msg);
+  }
+} catch (e) {
+  console.error('Spread mass cancel request failed:', e);
+}
+```
+
+---
+
+## Using the business channel directly
+
+If you need lower-level access, spread operations use `WS_KEY_MAP.prodBusiness` (or the equivalent demo/regional key). You can call `sendWSAPIRequest()` on the underlying `WebsocketClient` directly:
+
+```typescript
+import { WebsocketClient, WS_KEY_MAP } from 'okx-api';
+
+const wsClient = new WebsocketClient({ accounts: [{ /* ... */ }] });
+
+const res = await wsClient.sendWSAPIRequest(
+  WS_KEY_MAP.prodBusiness,
+  'sprd-order',
+  {
+    sprdId: 'BTC-USDT_BTC-USDT-SWAP',
+    side: 'buy',
+    ordType: 'limit',
+    sz: '1',
+    px: '100',
+  },
+);
+```
+
+<Tip>
+  For most use cases, stick with `WebsocketAPIClient`. It selects the correct WS key
+  automatically and provides per-operation type safety.
+</Tip>

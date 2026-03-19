@@ -1,0 +1,139 @@
+---
+title: 'Spread Trading'
+description: 'Submit and manage spread orders, query spread-specific market data (order books, tickers, candles), and view spread definitions.'
+---
+
+Spread trading lets you trade the price differential between two related instruments. Order placement and management require authentication; market data endpoints are public.
+
+## Method reference
+
+### Order management
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `submitSpreadOrder(params)` | POST | Yes | `/api/v5/sprd/order` | Place a spread order |
+| `cancelSpreadOrder(params?)` | POST | Yes | `/api/v5/sprd/cancel-order` | Cancel a spread order |
+| `cancelAllSpreadOrders(params?)` | POST | Yes | `/api/v5/sprd/mass-cancel` | Cancel all spread orders |
+| `updateSpreadOrder(params)` | POST | Yes | `/api/v5/sprd/amend-order` | Amend a spread order |
+| `cancelSpreadAllAfter(params)` | POST | Yes | `/api/v5/sprd/cancel-all-after` | Cancel-all-after dead-man’s switch |
+
+### Order queries
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getSpreadOrder(params)` | GET | Yes | `/api/v5/sprd/order` | Details of a specific spread order |
+| `getSpreadActiveOrders(params?)` | GET | Yes | `/api/v5/sprd/orders-pending` | Active (live) spread orders |
+| `getSpreadOrdersRecent(params?)` | GET | Yes | `/api/v5/sprd/orders-history` | Recent spread order history |
+| `getSpreadOrdersArchive(params?)` | GET | Yes | `/api/v5/sprd/orders-history-archive` | Archived spread order history |
+| `getSpreadTrades(params?)` | GET | Yes | `/api/v5/sprd/trades` | Your spread trade fills |
+
+### Market data (public)
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getSpreads(params?)` | GET | No | `/api/v5/sprd/spreads` | Available spread instruments |
+| `getSpreadOrderBook(params)` | GET | No | `/api/v5/sprd/books` | Order book for a spread |
+| `getSpreadTicker(params)` | GET | No | `/api/v5/market/sprd-ticker` | Ticker for a spread |
+| `getSpreadPublicTrades(params?)` | GET | No | `/api/v5/sprd/public-trades` | Public spread trades |
+| `getSpreadCandles(params)` | GET | No | `/api/v5/market/sprd-candles` | Recent candles for a spread |
+| `getSpreadHistoryCandles(params)` | GET | No | `/api/v5/market/sprd-history-candles` | Historical candles for a spread |
+
+## Examples
+
+### Discover available spreads
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient(); // no auth needed
+
+// All spreads
+const spreads = await client.getSpreads();
+for (const s of spreads.slice(0, 5)) {
+  console.log(`Spread: ${s.sprdId} (${s.instId1} / ${s.instId2})`);
+  console.log(`  Type: ${s.sprdType}, State: ${s.state}`);
+}
+
+// Filter by base instrument
+const btcSpreads = await client.getSpreads({ baseCcy: 'BTC' });
+```
+
+### Get spread market data
+
+```typescript
+const client = new RestClient();
+
+// Ticker
+const [ticker] = await client.getSpreadTicker({ sprdId: 'BTC-USDT_BTC-USDT-SWAP' });
+console.log('Spread last price:', ticker.last);
+console.log('Spread bid/ask:', ticker.bidPx, '/', ticker.askPx);
+
+// Order book
+const [book] = await client.getSpreadOrderBook({
+  sprdId: 'BTC-USDT_BTC-USDT-SWAP',
+  sz: '5',
+});
+console.log('Best ask:', book.asks[0]);
+console.log('Best bid:', book.bids[0]);
+
+// Candles
+const candles = await client.getSpreadCandles({
+  sprdId: 'BTC-USDT_BTC-USDT-SWAP',
+  bar: '1H',
+  limit: '24',
+});
+console.log('Last 24 hourly candles:', candles.length);
+```
+
+### Place a spread order
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const [order] = await client.submitSpreadOrder({
+  sprdId: 'BTC-USDT_BTC-USDT-SWAP',
+  side: 'buy',
+  ordType: 'limit',
+  sz: '1',
+  px: '-50',  // spread price (can be negative)
+});
+
+console.log('Spread order ID:', order.ordId);
+```
+
+### Amend and cancel spread orders
+
+```typescript
+// Amend the price
+const [amended] = await client.updateSpreadOrder({
+  ordId: 'your-order-id',
+  newPx: '-40',
+  newSz: '2',
+});
+console.log('Amended:', amended.ordId);
+
+// Cancel
+const [cancelled] = await client.cancelSpreadOrder({
+  ordId: 'your-order-id',
+});
+console.log('Cancelled:', cancelled.ordId);
+
+// Cancel all
+await client.cancelAllSpreadOrders();
+```
+
+### Set cancel-all-after timer
+
+```typescript
+// Cancel all spread orders if not refreshed within 60 seconds
+await client.cancelSpreadAllAfter({ timeOut: '60' });
+
+// Disable by setting to 0
+await client.cancelSpreadAllAfter({ timeOut: '0' });
+```

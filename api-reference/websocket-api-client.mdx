@@ -1,0 +1,355 @@
+---
+title: 'WebsocketAPIClient'
+description: 'Complete API reference for the WebsocketAPIClient class — a promise-driven wrapper for the OKX WebSocket Trade API.'
+---
+
+## Overview
+
+`WebsocketAPIClient` is a minimal, promise-driven wrapper around `WebsocketClient`. It lets you submit, cancel, and amend orders over WebSocket using async/await, without managing the underlying connection lifecycle yourself.
+
+Each method sends a request over the appropriate private or business WebSocket connection and returns a promise that resolves when the matching response arrives from OKX.
+
+<Note>
+  `WebsocketAPIClient` uses `WebsocketClient` internally. You can access the underlying client at any time via `wsApiClient.getWSClient()` to subscribe to channels, listen to events, or call `sendWSAPIRequest()` directly.
+</Note>
+
+```typescript
+import { WebsocketAPIClient } from 'okx-api';
+
+const client = new WebsocketAPIClient({
+  accounts: [
+    {
+      apiKey: 'YOUR_API_KEY',
+      apiSecret: 'YOUR_API_SECRET',
+      apiPass: 'YOUR_API_PASSPHRASE',
+    },
+  ],
+});
+
+// Place an order
+const result = await client.submitNewOrder({
+  instId: 'BTC-USDT',
+  tdMode: 'cash',
+  side: 'buy',
+  ordType: 'market',
+  sz: '0.01',
+});
+```
+
+---
+
+## Constructor
+
+```typescript
+new WebsocketAPIClient(
+  options?: WSClientConfigurableOptions & Partial<WSAPIClientConfigurableOptions>,
+  logger?: DefaultLogger
+)
+```
+
+<ParamField body="options" type="object">
+  Accepts all [`WSClientConfigurableOptions`](/api-reference/websocket-client#constructor-options-wsclientconfigurableoptions) fields (credentials, market, demo trading, etc.) plus the additional options below.
+</ParamField>
+
+<ParamField body="logger" type="DefaultLogger">
+  Optional custom logger.
+</ParamField>
+
+### Additional options (`WSAPIClientConfigurableOptions`)
+
+<ParamField body="attachEventListeners" type="boolean" default="true">
+  When `true`, the client automatically attaches default event listeners that log connection lifecycle events (`open`, `reconnect`, `reconnected`, `authenticated`, `exception`) to the console.
+
+  Set to `false` if you want to handle all events yourself via `getWSClient().on(...)`.
+</ParamField>
+
+---
+
+## Utility methods
+
+#### `getWSClient()`
+
+```typescript
+getWSClient(): WebsocketClient
+```
+
+Returns the underlying `WebsocketClient` instance. Use this to subscribe to channels, listen to raw events, or call `sendWSAPIRequest()` directly.
+
+---
+
+#### `connectWSAPI()`
+
+```typescript
+connectWSAPI(): Promise<unknown[]>
+```
+
+Pre-warms both the private and business WebSocket connections and authenticates them. Call this before your first order request to reduce initial latency.
+
+---
+
+#### `setTimeOffsetMs(offsetMs)`
+
+```typescript
+setTimeOffsetMs(offsetMs: number): void
+```
+
+Manually set the time offset (ms) between the local clock and OKX servers. Delegates to the underlying `WebsocketClient`.
+
+---
+
+## Order management methods
+
+All order methods require authentication. Credentials must be provided in the constructor options.
+
+---
+
+### `submitNewOrder(params)`
+
+```typescript
+submitNewOrder(
+  params: WSAPIPlaceOrderRequestV5
+): Promise<WSAPIResponse<[OrderResult], 'order'>>
+```
+
+Place a single new order via the WebSocket API.
+
+<ParamField body="params" type="WSAPIPlaceOrderRequestV5" required>
+  Order parameters. Key fields include:
+
+  - `instId` (string, required) — Instrument ID, e.g. `'BTC-USDT'`.
+  - `tdMode` (string, required) — Trade mode: `'cash'`, `'cross'`, or `'isolated'`.
+  - `side` (string, required) — `'buy'` or `'sell'`.
+  - `ordType` (string, required) — Order type: `'market'`, `'limit'`, `'post_only'`, `'fok'`, `'ioc'`, etc.
+  - `sz` (string, required) — Order size.
+  - `px` (string) — Price. Required for limit orders.
+  - `ccy` (string) — Margin currency. Required for cross-margin on non-USDT pairs.
+  - `clOrdId` (string) — Client-assigned order ID.
+  - `tag` (string) — Order tag.
+</ParamField>
+
+**OKX docs:** [WS place order](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-place-order)
+
+---
+
+### `submitMultipleOrders(params)`
+
+```typescript
+submitMultipleOrders(
+  params: WSAPIPlaceOrderRequestV5[]
+): Promise<WSAPIResponse<OrderResult[], 'batch-orders'>>
+```
+
+Place multiple orders in a single batch request.
+
+<ParamField body="params" type="WSAPIPlaceOrderRequestV5[]" required>
+  Array of order parameter objects. Each entry follows the same shape as `submitNewOrder()`.
+</ParamField>
+
+**OKX docs:** [WS place multiple orders](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-place-multiple-orders)
+
+---
+
+### `cancelOrder(params)`
+
+```typescript
+cancelOrder(
+  params: OrderIdRequest
+): Promise<WSAPIResponse<[WSAPICancelOrderResultV5], 'cancel-order'>>
+```
+
+Cancel a single open order.
+
+<ParamField body="params" type="OrderIdRequest" required>
+  - `instId` (string, required) — Instrument ID.
+  - `ordId` (string) — OKX order ID. Either `ordId` or `clOrdId` is required.
+  - `clOrdId` (string) — Client order ID.
+</ParamField>
+
+**OKX docs:** [WS cancel order](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-cancel-order)
+
+---
+
+### `cancelMultipleOrders(params)`
+
+```typescript
+cancelMultipleOrders(
+  params: OrderIdRequest[]
+): Promise<WSAPIResponse<WSAPICancelOrderResultV5[], 'batch-cancel-orders'>>
+```
+
+Cancel multiple open orders in a single batch request.
+
+<ParamField body="params" type="OrderIdRequest[]" required>
+  Array of order ID objects. Each entry follows the same shape as `cancelOrder()`.
+</ParamField>
+
+**OKX docs:** [WS cancel multiple orders](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-cancel-multiple-orders)
+
+---
+
+### `amendOrder(params)`
+
+```typescript
+amendOrder(
+  params: WSAPIAmendOrderRequestV5
+): Promise<WSAPIResponse<[OrderResult], 'amend-order'>>
+```
+
+Amend a single open order (price and/or quantity).
+
+<ParamField body="params" type="WSAPIAmendOrderRequestV5" required>
+  - `instId` (string, required) — Instrument ID.
+  - `ordId` (string) — OKX order ID. Either `ordId` or `clOrdId` is required.
+  - `clOrdId` (string) — Client order ID.
+  - `newSz` (string) — New order size.
+  - `newPx` (string) — New order price.
+  - `reqId` (string) — Client-assigned request ID, echoed back in the response.
+</ParamField>
+
+**OKX docs:** [WS amend order](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-amend-order)
+
+---
+
+### `amendMultipleOrders(params)`
+
+```typescript
+amendMultipleOrders(
+  params: WSAPIAmendOrderRequestV5[]
+): Promise<WSAPIResponse<[OrderResult], 'batch-amend-orders'>>
+```
+
+Amend multiple open orders in a single batch request.
+
+<ParamField body="params" type="WSAPIAmendOrderRequestV5[]" required>
+  Array of amendment objects. Each entry follows the same shape as `amendOrder()`.
+</ParamField>
+
+**OKX docs:** [WS amend multiple orders](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-amend-multiple-orders)
+
+---
+
+### `massCancelOrders(params)`
+
+```typescript
+massCancelOrders(
+  params: WSAPIMassCancelOrdersRequestV5
+): Promise<WSAPIResponse<[{ result: boolean }], 'mass-cancel'>>
+```
+
+Cancel all pending orders for a given instrument family in a single operation. Used by market makers for rapid risk-off.
+
+<ParamField body="params" type="WSAPIMassCancelOrdersRequestV5" required>
+  - `instType` (string, required) — Instrument type, e.g. `'OPTION'`.
+  - `instFamily` (string, required) — Instrument family, e.g. `'BTC-USD'`.
+</ParamField>
+
+**OKX docs:** [WS mass cancel order](https://www.okx.com/docs-v5/en/#order-book-trading-trade-ws-mass-cancel-order)
+
+---
+
+## Spread order methods
+
+Spread order methods route through the **business** WebSocket connection.
+
+---
+
+### `submitSpreadOrder(params)`
+
+```typescript
+submitSpreadOrder(
+  params: WSAPIPlaceSpreadOrderRequestV5
+): Promise<WSAPIResponse<[WSAPISpreadPlaceOrderResultV5], 'sprd-order'>>
+```
+
+Place a new spread order via WebSocket.
+
+<ParamField body="params" type="WSAPIPlaceSpreadOrderRequestV5" required>
+  - `sprdId` (string, required) — Spread instrument ID.
+  - `side` (string, required) — `'buy'` or `'sell'`.
+  - `ordType` (string, required) — Order type: `'limit'`, `'market'`, `'post_only'`, `'ioc'`, etc.
+  - `sz` (string, required) — Order size (number of contracts).
+  - `px` (string) — Price. Required for limit orders.
+  - `clOrdId` (string) — Client-assigned order ID.
+  - `tag` (string) — Order tag.
+</ParamField>
+
+**OKX docs:** [WS spread place order](https://www.okx.com/docs-v5/en/#spread-trading-websocket-trade-api-ws-place-order)
+
+---
+
+### `amendSpreadOrder(params)`
+
+```typescript
+amendSpreadOrder(
+  params: WSAPIAmendSpreadOrderRequestV5
+): Promise<WSAPIResponse<[WSAPISpreadAmendOrderResultV5], 'sprd-amend-order'>>
+```
+
+Amend an open spread order.
+
+<ParamField body="params" type="WSAPIAmendSpreadOrderRequestV5" required>
+  - `sprdId` (string, required) — Spread instrument ID.
+  - `ordId` (string) — OKX order ID. Either `ordId` or `clOrdId` is required.
+  - `clOrdId` (string) — Client order ID.
+  - `newSz` (string) — New order size.
+  - `newPx` (string) — New order price.
+  - `reqId` (string) — Client-assigned request ID.
+</ParamField>
+
+**OKX docs:** [WS spread amend order](https://www.okx.com/docs-v5/en/#spread-trading-websocket-trade-api-ws-amend-order)
+
+---
+
+### `cancelSpreadOrder(params)`
+
+```typescript
+cancelSpreadOrder(
+  params: WSAPICancelSpreadOrderRequestV5
+): Promise<WSAPIResponse<[WSAPISpreadCancelOrderResultV5], 'sprd-cancel-order'>>
+```
+
+Cancel a single open spread order.
+
+<ParamField body="params" type="WSAPICancelSpreadOrderRequestV5" required>
+  - `sprdId` (string, required) — Spread instrument ID.
+  - `ordId` (string) — OKX order ID. Either `ordId` or `clOrdId` is required.
+  - `clOrdId` (string) — Client order ID.
+</ParamField>
+
+**OKX docs:** [WS spread cancel order](https://www.okx.com/docs-v5/en/#spread-trading-websocket-trade-api-ws-cancel-order)
+
+---
+
+### `massCancelSpreadOrders(params)`
+
+```typescript
+massCancelSpreadOrders(
+  params: WSAPISpreadMassCancelOrdersRequestV5
+): Promise<WSAPIResponse<[{ result: boolean }], 'sprd-mass-cancel'>>
+```
+
+Cancel all open spread orders for a given spread instrument.
+
+<ParamField body="params" type="WSAPISpreadMassCancelOrdersRequestV5" required>
+  - `sprdId` (string, required) — Spread instrument ID.
+</ParamField>
+
+**OKX docs:** [WS spread cancel all orders](https://www.okx.com/docs-v5/en/#spread-trading-websocket-trade-api-ws-cancel-all-orders)
+
+---
+
+## Method summary
+
+| Method | WS connection | OKX operation |
+|--------|:-------------:|---------------|
+| `submitNewOrder()` | private | `order` |
+| `submitMultipleOrders()` | private | `batch-orders` |
+| `cancelOrder()` | private | `cancel-order` |
+| `cancelMultipleOrders()` | private | `batch-cancel-orders` |
+| `amendOrder()` | private | `amend-order` |
+| `amendMultipleOrders()` | private | `batch-amend-orders` |
+| `massCancelOrders()` | private | `mass-cancel` |
+| `submitSpreadOrder()` | business | `sprd-order` |
+| `amendSpreadOrder()` | business | `sprd-amend-order` |
+| `cancelSpreadOrder()` | business | `sprd-cancel-order` |
+| `massCancelSpreadOrders()` | business | `sprd-mass-cancel` |

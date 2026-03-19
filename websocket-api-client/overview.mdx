@@ -1,0 +1,170 @@
+---
+title: "WebSocket API Client"
+description: "Place and manage orders with sub-millisecond latency using a promise-based WebSocket API wrapper."
+---
+
+## What is the WebsocketAPIClient?
+
+`WebsocketAPIClient` is a REST-like wrapper around OKX's WebSocket API. It exposes each WS API operation as a typed async method that returns a `Promise` — so you write the same `await`-based code you use with a REST client, but requests travel over a persistent WebSocket connection.
+
+Internally, every method calls `WebsocketClient.sendWSAPIRequest()` and resolves when the matching response arrives. The client automatically:
+
+- Authenticates the connection using your API credentials
+- Routes order book operations over the `private` channel
+- Routes spread trading operations over the `business` channel
+- Reconnects and re-authenticates automatically on connection failure
+
+## When to use WebsocketAPIClient vs RestClient
+
+| | `RestClient` | `WebsocketAPIClient` |
+|---|---|---|
+| Transport | HTTPS | Persistent WebSocket |
+| Round-trip latency | Higher (TCP + TLS handshake per request) | Lower (connection already open) |
+| Order placement | Yes | Yes |
+| Market data & account streams | No | Use `WebsocketClient` instead |
+| Interface style | `async`/`await` | `async`/`await` |
+
+<Tip>
+  Use `WebsocketAPIClient` when latency on order operations matters. For everything else — market data subscriptions, account streams — use `WebsocketClient`.
+</Tip>
+
+## How it works internally
+
+`WebsocketAPIClient` wraps `WebsocketClient` and delegates every call to `sendWSAPIRequest()`:
+
+```typescript
+// Internally, submitNewOrder() does:
+return this.wsClient.sendWSAPIRequest(
+  this.getWSClient().getMarketWsKey('private'),
+  'order',
+  params,
+);
+```
+
+You can call `sendWSAPIRequest()` directly via `wsClient.getWSClient()` if you need lower-level access.
+
+## Constructor
+
+```typescript
+new WebsocketAPIClient(
+  options?: WSClientConfigurableOptions & Partial<WSAPIClientConfigurableOptions>,
+  logger?: DefaultLogger,
+)
+```
+
+### Configuration options
+
+<ParamField path="accounts" type="APICredentials[]">
+  One or more API credential objects. Required for all order operations.
+  Each entry has `apiKey`, `apiSecret`, and `apiPass`.
+</ParamField>
+
+<ParamField path="market" type="'prod' | 'EEA' | 'US'" default="'prod'">
+  The OKX region to connect to:
+  - `'prod'` — global (`www.okx.com`)
+  - `'EEA'` — European Economic Area (`my.okx.com`)
+  - `'US'` — United States (`app.okx.com`)
+</ParamField>
+
+<ParamField path="demoTrading" type="boolean" default="false">
+  Set to `true` to use OKX's demo trading environment.
+</ParamField>
+
+<ParamField path="attachEventListeners" type="boolean" default="true">
+  When `true`, the client attaches default `console.log` event listeners for
+  connection events (`open`, `reconnect`, `reconnected`, `authenticated`, `exception`).
+  Set to `false` and attach your own listeners via `wsClient.getWSClient().on(...)` if
+  you want custom handling.
+</ParamField>
+
+<ParamField path="pingInterval" type="number">
+  How often (in milliseconds) to send a ping to keep the connection alive.
+</ParamField>
+
+<ParamField path="reconnectTimeout" type="number">
+  Delay in milliseconds before attempting to respawn a dropped connection.
+</ParamField>
+
+## Basic setup
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+    ```bash npm
+    npm install okx-api
+    ```
+    ```bash yarn
+    yarn add okx-api
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Create the client">
+    ```typescript
+    import { WebsocketAPIClient } from 'okx-api';
+    // CommonJS: const { WebsocketAPIClient } = require('okx-api');
+
+    const wsClient = new WebsocketAPIClient({
+      accounts: [
+        {
+          apiKey: process.env.API_KEY,
+          apiSecret: process.env.API_SECRET,
+          apiPass: process.env.API_PASSPHRASE,
+        },
+      ],
+      // For EEA users: market: 'EEA'
+      // For US users:  market: 'US'
+    });
+    ```
+  </Step>
+
+  <Step title="Place your first order">
+    ```typescript
+    try {
+      const res = await wsClient.submitNewOrder({
+        instId: 'BTC-USDT',
+        tdMode: 'cash',
+        side: 'buy',
+        ordType: 'market',
+        sz: '100',
+      });
+      console.log('Order result:', res);
+    } catch (e) {
+      console.error('Order failed:', e);
+    }
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The WebSocket connection is established lazily on the first request. To avoid
+  the cold-start delay on your first order, call `await wsClient.connectWSAPI()` at
+  startup.
+</Note>
+
+## Custom event listeners
+
+By default the client logs connection events to the console. To use your own handlers, set `attachEventListeners: false` and listen on the embedded `WebsocketClient`:
+
+```typescript
+const wsClient = new WebsocketAPIClient(
+  { accounts: [...], attachEventListeners: false },
+);
+
+wsClient.getWSClient()
+  .on('open', ({ wsKey }) => console.log('Connected', wsKey))
+  .on('reconnected', ({ wsKey }) => console.log('Reconnected', wsKey))
+  .on('authenticated', ({ wsKey }) => console.log('Authenticated', wsKey))
+  .on('exception', (data) => console.error('WS error', data));
+```
+
+## Explore the available operations
+
+<CardGroup cols={2}>
+  <Card title="Order management" icon="arrow-right-arrow-left" href="/websocket-api-client/order-management">
+    Place, amend, cancel, and mass-cancel orders via WebSocket
+  </Card>
+  <Card title="Spread orders" icon="chart-line" href="/websocket-api-client/spread-orders">
+    Place, amend, and cancel spread trading orders via WebSocket
+  </Card>
+</CardGroup>

@@ -1,0 +1,178 @@
+---
+title: Reconnection
+description: How the WebSocket client detects dropped connections, restores authentication, and resubscribes active topics automatically.
+---
+
+The `WebsocketClient` includes a built-in heartbeat and reconnection system. When a connection drops the client tears it down, respawns it, re-authenticates if needed, and resubscribes all active topics — without any intervention required from your application code.
+
+## Heartbeat mechanism
+
+The client sends periodic `ping` frames to the server and expects a `pong` response within a configurable timeout window. This detects stale connections that have silently dropped — a common issue with long-lived TCP connections traversing NAT or load-balancers.
+
+```
+client ──ping──► server
+client ◄──pong── server   ✓ connection alive
+
+client ──ping──► server
+         (no response within pongTimeout)
+client decides connection is dead → initiates reconnect
+```
+
+Configure the intervals using constructor options:
+
+```typescript
+const wsClient = new WebsocketClient({
+  pingInterval: 10000,   // ms between pings (default varies)
+  pongTimeout: 5000,     // ms to wait for pong before treating connection as dead
+  reconnectTimeout: 2500, // ms to wait before spawning a new connection
+});
+```
+
+| Option | Description |
+|--------|-------------|
+| `pingInterval` | How often to send a ping frame |
+| `pongTimeout` | How long to wait for a pong reply before declaring the connection dead |
+| `reconnectTimeout` | Delay before opening a new connection after a drop is detected |
+| `disableHeartbeat` | Set `true` to disable the ping/pong mechanism entirely. Not recommended. |
+
+<Warning>
+Disabling the heartbeat (`disableHeartbeat: true`) is not recommended. Without it the client cannot detect silent connection drops and will stop receiving data without any visible error.
+</Warning>
+
+## Reconnection lifecycle
+
+When a connection drop is detected (pong timeout, socket error, or a server-initiated close) the following sequence runs automatically:
+
+<Steps>
+  <Step title="Emit 'reconnect'">
+    The `reconnect` event fires, notifying your application that reconnection is starting.
+
+    ```typescript
+    wsClient.on('reconnect', ({ wsKey }) => {
+      console.log('ws automatically reconnecting....', wsKey);
+    });
+    ```
+  </Step>
+  <Step title="Teardown">
+    The existing socket is cleaned up. Any in-flight requests tied to this connection are rejected.
+  </Step>
+  <Step title="Wait for reconnectTimeout">
+    The client waits for `reconnectTimeout` milliseconds before attempting to reconnect, avoiding hammering the server.
+  </Step>
+  <Step title="Respawn connection">
+    A new WebSocket connection is opened to the same endpoint.
+  </Step>
+  <Step title="Re-authenticate (private connections)">
+    If the connection is a private or business endpoint, a fresh signed login request is sent automatically. A new HMAC signature is generated for each auth attempt.
+  </Step>
+  <Step title="Resubscribe">
+    All topics that were active before the drop are resubscribed in batch. Topics removed via `unsubscribe()` are not resubscribed.
+  </Step>
+  <Step title="Emit 'reconnected'">
+    The `reconnected` event fires once the connection is fully restored.
+
+    ```typescript
+    wsClient.on('reconnected', (data) => {
+      console.log('ws has reconnected', data?.wsKey);
+    });
+    ```
+  </Step>
+</Steps>
+
+## Server-initiated reconnects
+
+OKX may send a `notice` event with code `64008` when a server is about to restart for an upgrade. The client handles this automatically:
+
+1. The notice is detected inside the message parser.
+2. `executeReconnectableClose()` is queued immediately.
+3. The same teardown → respawn → re-auth → resubscribe flow runs as for a dropped connection.
+4. The notice event is also emitted on `update` so your application can log it.
+
+## The wsKey concept
+
+The client manages multiple independent WebSocket connections, each identified by a `WsKey` string. Different connections are used for different endpoint types and markets.
+
+```typescript
+export const WS_KEY_MAP = {
+  // OKX Global (www.okx.com)
+  prodPublic: 'prodPublic',     // public channels, no auth
+  prodPrivate: 'prodPrivate',   // private channels, requires auth
+  prodBusiness: 'prodBusiness', // business channels (candles, algo orders), sometimes requires auth
+
+  // Demo trading
+  prodDemoPublic: 'prodDemoPublic',
+  prodDemoPrivate: 'prodDemoPrivate',
+  prodDemoBusiness: 'prodDemoBusiness',
+
+  // EEA (my.okx.com)
+  eeaLivePublic: 'eeaLivePublic',
+  eeaLivePrivate: 'eeaLivePrivate',
+  eeaLiveBusiness: 'eeaLiveBusiness',
+
+  // US (app.okx.com)
+  usLivePublic: 'usLivePublic',
+  usLivePrivate: 'usLivePrivate',
+  usLiveBusiness: 'usLiveBusiness',
+  // ... and demo variants
+};
+```
+
+When a subscription request arrives, the library resolves the correct `WsKey` based on the channel name and the configured `market`. The `wsKey` field is included in every emitted event so you can identify the source connection in your handlers.
+
+```typescript
+wsClient.on('update', (data) => {
+  console.log('from connection:', data.wsKey); // e.g. 'prodPublic'
+});
+
+wsClient.on('reconnect', ({ wsKey }) => {
+  console.log('reconnecting connection:', wsKey);
+});
+```
+
+## WebSocket endpoints by market and type
+
+| Market | Type | Live URL |
+|--------|------|----------|
+| Global (`prod`) | public | `wss://ws.okx.com:8443/ws/v5/public` |
+| Global (`prod`) | private | `wss://ws.okx.com:8443/ws/v5/private` |
+| Global (`prod`) | business | `wss://ws.okx.com:8443/ws/v5/business` |
+| EEA | public | `wss://wseea.okx.com:8443/ws/v5/public` |
+| EEA | private | `wss://wseea.okx.com:8443/ws/v5/private` |
+| US | public | `wss://wsus.okx.com:8443/ws/v5/public` |
+| US | private | `wss://wsus.okx.com:8443/ws/v5/private` |
+
+Demo trading uses the `wspap` / `wseeapap` / `wsuspap` host variants. Set `demoTrading: true` in the constructor and the correct URLs are selected automatically.
+
+## Automatic vs manual reconnection
+
+In most cases you should rely on automatic reconnection and simply handle the `reconnected` event to reset any derived state:
+
+```typescript
+wsClient.on('reconnected', (data) => {
+  // The library has already resubscribed all active channels.
+  // If you maintain an in-memory order book or similar derived state,
+  // reset it here. The channel will send a fresh snapshot on resubscription.
+  console.log('reconnected on', data?.wsKey);
+  resetLocalOrderBook();
+});
+```
+
+Manual intervention is appropriate when:
+
+- **Authentication fails repeatedly** — close the connection to stop the loop:
+
+  ```typescript
+  wsClient.on('exception', (data) => {
+    const INVALID_API_KEY_ERROR = '60005';
+    if (data.event === 'error' && data.code === INVALID_API_KEY_ERROR) {
+      console.error('Detected auth failure - closing websocket');
+      wsClient.close(data.wsKey);
+    }
+  });
+  ```
+
+- **You want to change subscriptions after reconnection** — use `subscribe()` and `unsubscribe()` in the `reconnected` handler.
+
+<Tip>
+The reconnection sequence re-authenticates using the same credentials provided at construction time. If your credentials rotate, you will need to create a new `WebsocketClient` instance with the updated credentials rather than relying on the automatic reconnection.
+</Tip>

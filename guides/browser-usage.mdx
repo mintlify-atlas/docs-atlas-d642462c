@@ -1,0 +1,131 @@
+---
+title: Browser Usage
+description: Use the okx-api SDK in browser and frontend projects via the TypeScript import approach or the pre-built webpack bundle.
+---
+
+The SDK supports two approaches for browser/frontend usage. Choose the one that matches your build tooling.
+
+<Warning>
+  Never embed private API keys, secrets, or passphrases in frontend code. Any credentials included in a browser bundle are visible to anyone who views the page source. Restrict browser usage to public API endpoints only.
+</Warning>
+
+## Option 1: TypeScript import (recommended)
+
+This is the modern approach. Import the SDK directly into your frontend project with full TypeScript support. It requires polyfilling a couple of Node.js built-ins that browsers do not provide natively.
+
+<Steps>
+
+### Install polyfills
+
+```bash
+npm install crypto-browserify stream-browserify
+```
+
+### Configure path aliases in `tsconfig.json`
+
+Tell TypeScript to resolve `crypto` and `stream` imports to their browser-compatible equivalents:
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "crypto": ["./node_modules/crypto-browserify"],
+      "stream": ["./node_modules/stream-browserify"]
+    }
+  }
+}
+```
+
+### Declare `global` in your app's entry point
+
+Add this in the global context of your application (for example, in Angular's `polyfills.ts`, or at the top of your entry file):
+
+```javascript
+(window as any).global = window;
+```
+
+### Import and use the SDK
+
+```typescript
+import { RestClient } from 'okx-api';
+
+// Public endpoints only — do not include private credentials in frontend code
+const client = new RestClient();
+
+(async () => {
+  try {
+    const instruments = await client.getInstruments({ instType: 'SPOT' });
+    console.log('SPOT instruments:', instruments);
+  } catch (e) {
+    console.error('Request failed:', e);
+  }
+})();
+```
+
+</Steps>
+
+## Option 2: Webpack bundle (script tag)
+
+This is the legacy approach for including the SDK on a plain HTML page via a `<script>` tag. It produces a minified UMD bundle in the `dist/` directory.
+
+<Steps>
+
+### Build the bundle
+
+```bash
+npm install
+npm run build
+npm pack
+```
+
+The webpack configuration targets UMD output and uses browser-compatible aliases:
+
+```javascript
+// webpack/webpack.config.cjs (excerpt)
+module.exports = {
+  entry: './dist/cjs/index.js',
+  output: {
+    filename: 'okxapi.js',
+    library: 'okxapi',
+    libraryTarget: 'umd',
+  },
+  resolve: {
+    alias: {
+      // Swap Node.js internals for browser-safe stubs
+      [path.resolve(__dirname, '../dist/cjs/util/node-support.js')]:
+        path.resolve(__dirname, '../dist/cjs/util/browser-support.js'),
+    },
+    fallback: {
+      http: false,
+      https: false,
+    },
+  },
+};
+```
+
+### Include the bundle in your HTML
+
+After building, copy `dist/okxapi.js` into your project and reference it:
+
+```html
+<script src="/path/to/okxapi.js"></script>
+<script>
+  const client = new okxapi.RestClient();
+
+  client.getInstruments({ instType: 'SPOT' })
+    .then((instruments) => console.log(instruments))
+    .catch((err) => console.error(err));
+</script>
+```
+
+</Steps>
+
+## Caveats
+
+<Note>
+  The `keepAlive` option on `RestClientOptions` uses Node.js's `https.Agent`, which is not available in browsers. This option is silently ignored in browser environments.
+</Note>
+
+- **No private keys in the browser.** Use a server-side proxy if you need to make authenticated requests from a web application.
+- **CORS:** OKX's API endpoints may not allow direct browser requests from all origins. Check their CORS policy before building browser-based integrations.
+- **Bundle size:** The webpack bundle includes the full SDK. Use tree-shaking via the TypeScript import approach if bundle size is a concern.

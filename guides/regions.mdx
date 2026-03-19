@@ -1,0 +1,204 @@
+---
+title: Regions
+description: Configure the okx-api SDK for OKX Global, EEA (my.okx.com), or US (app.okx.com) regions.
+---
+
+OKX operates three distinct regional domains, each with its own API endpoints. The SDK defaults to OKX Global and requires only a single option change to target a different region.
+
+## Supported regions
+
+<CardGroup cols={3}>
+  <Card title="Global" icon="globe">
+    **Domain:** `www.okx.com`
+
+    The default region. No extra configuration needed.
+
+    `market: 'GLOBAL'` (or omit entirely)
+  </Card>
+  <Card title="EEA" icon="building-columns">
+    **Domain:** `my.okx.com`
+
+    For users registered under the European Economic Area entity.
+
+    `market: 'EEA'`
+  </Card>
+  <Card title="US" icon="flag">
+    **Domain:** `app.okx.com`
+
+    For users registered under the OKX US entity.
+
+    `market: 'US'`
+  </Card>
+</CardGroup>
+
+<Note>
+  Available functionality differs between regions. Refer to the corresponding API documentation for your region: [Global](https://www.okx.com/docs-v5/en/), [EEA](https://my.okx.com/docs-v5/en/), [US](https://app.okx.com/docs-v5/en/).
+</Note>
+
+## Configuring the RestClient
+
+Pass the `market` option to the `RestClient` constructor. All subsequent REST calls will be routed to the correct regional domain.
+
+<CodeGroup>
+
+```typescript Global (default)
+import { RestClient } from 'okx-api';
+
+// Global is the default — no market option required.
+const client = new RestClient({
+  apiKey: 'apiKeyHere',
+  apiSecret: 'apiSecretHere',
+  apiPass: 'apiPassHere',
+});
+```
+
+```typescript EEA (my.okx.com)
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: 'apiKeyHere',
+  apiSecret: 'apiSecretHere',
+  apiPass: 'apiPassHere',
+  market: 'EEA',
+});
+```
+
+```typescript US (app.okx.com)
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: 'apiKeyHere',
+  apiSecret: 'apiSecretHere',
+  apiPass: 'apiPassHere',
+  market: 'US',
+});
+```
+
+</CodeGroup>
+
+## Configuring the WebsocketClient
+
+The `WebsocketClient` (and `WebsocketAPIClient`) accept the same `market` option.
+
+<CodeGroup>
+
+```typescript EEA WebSocket
+import { WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient({
+  market: 'EEA',
+  accounts: [
+    {
+      apiKey: 'apiKeyHere',
+      apiSecret: 'apiSecretHere',
+      apiPass: 'apiPassHere',
+    },
+  ],
+});
+
+wsClient.on('update', (data) => {
+  console.log(new Date(), 'ws update (raw data received)', JSON.stringify(data));
+});
+wsClient.on('open', (data) => {
+  console.log('ws connection opened open:', data.wsKey);
+});
+wsClient.on('reconnected', (data) => {
+  console.log('ws has reconnected ', data?.wsKey);
+});
+wsClient.on('exception', (data) => {
+  console.error('ws exception: ', data);
+});
+
+wsClient.subscribe([
+  { channel: 'instruments', instType: 'SPOT' },
+  { channel: 'tickers', instId: 'ETH-BTC' },
+]);
+```
+
+```typescript US WebSocket
+import { RestClient, WebsocketClient } from 'okx-api';
+
+const client = new RestClient({
+  market: 'US',
+});
+
+const wsClient = new WebsocketClient({
+  market: 'US',
+});
+
+(async () => {
+  try {
+    const results = await client.getInstruments({ instType: 'SPOT' });
+    console.log(
+      'result: ',
+      results.filter((row) => row.baseCcy === 'SUI'),
+    );
+  } catch (e) {
+    console.error('request failed: ', e);
+  }
+
+  wsClient.on('update', (data) => {
+    console.log(new Date(), 'ws update (raw data received)', JSON.stringify(data));
+  });
+  wsClient.on('open', (data) => {
+    console.log('ws connection opened open:', data.wsKey);
+  });
+  wsClient.on('reconnected', (data) => {
+    console.log('ws has reconnected ', data?.wsKey);
+  });
+  wsClient.on('exception', (data) => {
+    console.error('ws exception: ', data);
+  });
+
+  wsClient.subscribe([
+    { channel: 'instruments', instType: 'SPOT' },
+    { channel: 'tickers', instId: 'ETH-BTC' },
+  ]);
+})();
+```
+
+</CodeGroup>
+
+## The `market` option
+
+The `market` property is typed as `APIMarket` and is shared between `RestClientOptions` and `WSClientConfigurableOptions`:
+
+```typescript
+export type APIMarket =
+  | 'prod'    // alias for GLOBAL, kept for backwards compatibility
+  | 'GLOBAL'  // www.okx.com (default)
+  | 'EEA'     // my.okx.com
+  | 'US';     // app.okx.com
+```
+
+Omitting `market` is equivalent to setting `market: 'GLOBAL'`.
+
+## Demo trading mode
+
+All regions support OKX's paper/demo trading environment. Set `demoTrading: true` alongside your region to use demo trading credentials without touching live funds.
+
+```typescript
+import { RestClient, WebsocketClient } from 'okx-api';
+
+const demoRestClient = new RestClient({
+  apiKey: process.env.API_KEY_COM,
+  apiSecret: process.env.API_SECRET_COM,
+  apiPass: process.env.API_PASS_COM,
+  demoTrading: true,
+});
+
+const demoWsClient = new WebsocketClient({
+  demoTrading: true,
+  accounts: [
+    {
+      apiKey: process.env.API_KEY_COM,
+      apiSecret: process.env.API_SECRET_COM,
+      apiPass: process.env.API_PASSPHRASE_COM,
+    },
+  ],
+});
+```
+
+<Tip>
+  Demo trading API keys are separate from live keys. Generate them under [OKX Demo Trading](https://www.okx.com/account/my-api) by selecting the demo environment.
+</Tip>

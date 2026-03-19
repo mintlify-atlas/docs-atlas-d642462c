@@ -1,0 +1,159 @@
+---
+title: 'Recurring Buy'
+description: 'Set up, amend, stop, and track recurring dollar-cost averaging (DCA) purchase orders.'
+---
+
+All recurring buy endpoints require authentication.
+
+## Method reference
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `submitRecurringBuyOrder(params)` | POST | `/api/v5/tradingBot/recurring/order-algo` | Create a recurring buy plan |
+| `amendRecurringBuyOrder(params)` | POST | `/api/v5/tradingBot/recurring/amend-order-algo` | Amend a recurring buy plan |
+| `stopRecurringBuyOrder(params)` | POST | `/api/v5/tradingBot/recurring/stop-order-algo` | Stop a recurring buy plan |
+| `getRecurringBuyOrders(params)` | GET | `/api/v5/tradingBot/recurring/orders-algo-pending` | Active recurring buy orders |
+| `getRecurringBuyOrderHistory(params)` | GET | `/api/v5/tradingBot/recurring/orders-algo-history` | Historical recurring buy orders |
+| `getRecurringBuyOrderDetails(params)` | GET | `/api/v5/tradingBot/recurring/orders-algo-details` | Details of a specific recurring buy order |
+| `getRecurringBuySubOrders(params)` | GET | `/api/v5/tradingBot/recurring/sub-orders` | Sub-orders (individual purchases) within a plan |
+
+## Examples
+
+### Create a recurring buy plan
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const [plan] = await client.submitRecurringBuyOrder({
+  stgyName: 'Weekly BTC DCA',
+  recurringList: [
+    {
+      ccy: 'BTC',
+      ratio: '0.6',   // 60% of the budget goes to BTC
+    },
+    {
+      ccy: 'ETH',
+      ratio: '0.4',   // 40% goes to ETH
+    },
+  ],
+  period: 'weekly',
+  recurringDay: '1',     // Monday (1 = Monday, 7 = Sunday)
+  recurringTime: '09',   // 09:00 UTC
+  timeZone: '0',         // UTC
+  amt: '100',            // spend 100 USDT per cycle
+  investmentCcy: 'USDT',
+  tdMode: 'cash',
+});
+
+console.log('Recurring buy algo ID:', plan.algoId);
+```
+
+### Amend a recurring buy plan
+
+```typescript
+const [updated] = await client.amendRecurringBuyOrder({
+  algoId: 'your-algo-id',
+  stgyName: 'Weekly BTC DCA (updated)',
+  amt: '200',            // increase to 200 USDT per cycle
+  recurringList: [
+    { ccy: 'BTC', ratio: '0.7' },
+    { ccy: 'ETH', ratio: '0.3' },
+  ],
+});
+console.log('Updated plan:', updated.algoId);
+```
+
+### View active plans and their sub-orders
+
+```typescript
+// Active plans
+const activePlans = await client.getRecurringBuyOrders({
+  algoOrdType: 'recurring',
+});
+
+for (const plan of activePlans) {
+  console.log(`Plan ${plan.algoId}: ${plan.stgyName}`);
+  console.log(`  Period: ${plan.period}, Amount: ${plan.amt} ${plan.investmentCcy}`);
+  console.log(`  Total invested: ${plan.totalAnnualizedRate}`);
+}
+
+// Sub-orders for a specific plan (individual purchases)
+const subOrders = await client.getRecurringBuySubOrders({
+  algoId: 'your-algo-id',
+  algoOrdType: 'recurring',
+});
+
+for (const sub of subOrders) {
+  console.log(`Purchase at ${sub.cTime}: ${sub.sz} ${sub.ccy} @ ${sub.avgPx}`);
+}
+```
+
+### Get details of a plan
+
+```typescript
+const [details] = await client.getRecurringBuyOrderDetails({
+  algoId: 'your-algo-id',
+});
+
+console.log('Strategy name:', details.stgyName);
+console.log('State:', details.state);
+console.log('Total purchased:', details.pnlRatio);
+for (const item of details.recurringList) {
+  console.log(`  ${item.ccy}: ratio=${item.ratio}, totalAmt=${item.totalAmt}`);
+}
+```
+
+### Stop a recurring buy plan
+
+```typescript
+const [stopped] = await client.stopRecurringBuyOrder({
+  algoId: 'your-algo-id',
+});
+console.log('Stopped plan:', stopped.algoId);
+```
+
+### View order history
+
+```typescript
+const history = await client.getRecurringBuyOrderHistory({
+  algoOrdType: 'recurring',
+  limit: '10',
+});
+
+for (const plan of history) {
+  console.log(`${plan.stgyName}: state=${plan.state}, created=${plan.cTime}`);
+}
+```
+
+## Key parameter types
+
+<AccordionGroup>
+  <Accordion title="PlaceRecurringBuyOrderRequest">
+
+  ```typescript
+  interface PlaceRecurringBuyOrderRequest {
+    stgyName: string;          // Plan name
+    recurringList: {
+      ccy: string;             // Currency to buy (e.g. 'BTC')
+      ratio: string;           // Allocation ratio (0–1, must sum to 1)
+    }[];
+    period: 'hourly' | 'daily' | 'weekly' | 'monthly';
+    recurringDay?: string;     // Day of week (weekly) or day of month (monthly)
+    recurringHour?: string;    // Hour of day (hourly/daily)
+    recurringTime: string;     // Hour (0–23) at which to execute
+    timeZone: string;          // UTC offset as string (e.g. '0', '8', '-5')
+    amt: string;               // Amount to spend per cycle
+    investmentCcy: string;     // Currency to spend (e.g. 'USDT')
+    tdMode: 'cash';            // Trade mode
+    tag?: string;              // Order tag
+  }
+  ```
+
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,220 @@
+---
+title: 'Funding'
+description: 'Deposit addresses, withdrawal submission, fund transfers, and currency conversion via the funding account endpoints.'
+---
+
+All funding methods require authentication unless noted otherwise.
+
+## Method reference
+
+### Balances and currencies
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getCurrencies(params?)` | GET | `/api/v5/asset/currencies` | Supported currencies and chain info |
+| `getBalances(params?)` | GET | `/api/v5/asset/balances` | Funding account balances |
+| `getAccountAssetValuation(params?)` | GET | `/api/v5/asset/asset-valuation` | Total asset valuation in a given currency |
+| `getNonTradableAssets(params?)` | GET | `/api/v5/asset/non-tradable-assets` | Non-tradable asset balances |
+
+### Transfers
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `fundsTransfer(params)` | POST | `/api/v5/asset/transfer` | Transfer between funding and trading accounts |
+| `getFundsTransferState(params?)` | GET | `/api/v5/asset/transfer-state` | Status of a previous transfer |
+| `getAssetBillsDetails(params?)` | GET | `/api/v5/asset/bills` | Funding account bills (last month) |
+
+### Deposits
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getDepositAddress(params)` | GET | `/api/v5/asset/deposit-address` | On-chain deposit address for a currency |
+| `getDepositHistory(params?)` | GET | `/api/v5/asset/deposit-history` | Deposit history |
+| `getLightningDeposits(params)` | GET | `/api/v5/asset/deposit-lightning` | Generate a Lightning Network invoice |
+
+### Withdrawals
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `submitWithdraw(params)` | POST | `/api/v5/asset/withdrawal` | Submit an on-chain withdrawal |
+| `submitWithdrawLightning(params)` | POST | `/api/v5/asset/withdrawal-lightning` | Withdraw via Lightning Network |
+| `cancelWithdrawal(params)` | POST | `/api/v5/asset/cancel-withdrawal` | Cancel a pending withdrawal |
+| `getWithdrawalHistory(params?)` | GET | `/api/v5/asset/withdrawal-history` | Withdrawal history |
+| `getDepositWithdrawStatus(params)` | GET | `/api/v5/asset/deposit-withdraw-status` | Real-time status of a deposit or withdrawal |
+
+### Currency conversion
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getConvertCurrencies()` | GET | `/api/v5/asset/convert/currencies` | Currencies available for conversion |
+| `getConvertCurrencyPair(params)` | GET | `/api/v5/asset/convert/currency-pair` | Conversion pair details and limits |
+| `estimateConvertQuote(params)` | POST | `/api/v5/asset/convert/estimate-quote` | Get a real-time conversion quote |
+| `convertTrade(params)` | POST | `/api/v5/asset/convert/trade` | Execute a conversion using a quote |
+| `getConvertHistory(params?)` | GET | `/api/v5/asset/convert/history` | Conversion transaction history |
+
+## Examples
+
+### Get funding account balances
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+// All funding balances
+const balances = await client.getBalances();
+for (const b of balances) {
+  console.log(`${b.ccy}: available=${b.availBal}, frozen=${b.frozenBal}`);
+}
+
+// Single currency
+const [usdtBalance] = await client.getBalances({ ccy: 'USDT' });
+console.log('USDT funding balance:', usdtBalance.availBal);
+```
+
+### Transfer from funding to trading account
+
+```typescript
+const result = await client.fundsTransfer({
+  ccy: 'USDT',
+  amt: '100',
+  from: '6',   // '6' = funding account
+  to: '18',    // '18' = trading account
+});
+console.log('Transfer ID:', result[0].transId);
+
+// Check transfer state
+const state = await client.getFundsTransferState({
+  transId: result[0].transId,
+});
+console.log('Status:', state[0].state); // 'success', 'pending', 'failed'
+```
+
+### Get deposit address
+
+```typescript
+const addresses = await client.getDepositAddress({ ccy: 'USDT' });
+for (const addr of addresses) {
+  console.log(`Chain: ${addr.chain}, Address: ${addr.addr}`);
+  if (addr.tag) console.log(`Memo/Tag: ${addr.tag}`);
+}
+```
+
+### Submit a withdrawal
+
+```typescript
+const [withdrawal] = await client.submitWithdraw({
+  ccy: 'USDT',
+  amt: '50',
+  dest: '4',                          // '4' = on-chain
+  toAddr: '0xYourAddressHere',
+  chain: 'USDT-ERC20',
+});
+console.log('Withdrawal ID:', withdrawal.wdId);
+```
+
+<Warning>
+Double-check the `chain` value against `getCurrencies()` output. Sending to the wrong chain results in permanent loss of funds.
+</Warning>
+
+### Currency conversion
+
+```typescript
+// 1. Get a quote to convert 100 USDT to BTC
+const [quote] = await client.estimateConvertQuote({
+  baseCcy: 'BTC',
+  quoteCcy: 'USDT',
+  side: 'sell',          // sell base (BTC) for quote (USDT)
+  rfqSz: '100',          // amount in rfqSzCcy
+  rfqSzCcy: 'USDT',
+  quoteId: '',           // leave blank for initial request
+});
+
+console.log('You will receive:', quote.toAmt, quote.toCcy);
+console.log('Quote ID:', quote.quoteId);
+console.log('Quote expires:', quote.clQReqId);
+
+// 2. Execute the conversion using the quote
+const [trade] = await client.convertTrade({
+  quoteId: quote.quoteId,
+  baseCcy: 'BTC',
+  quoteCcy: 'USDT',
+  side: 'sell',
+  sz: '100',
+  szCcy: 'USDT',
+});
+console.log('Conversion trade ID:', trade.tradeId);
+```
+
+### Query deposit history
+
+```typescript
+const deposits = await client.getDepositHistory({
+  ccy: 'BTC',
+  limit: '20',
+});
+
+for (const d of deposits) {
+  console.log(`${d.ccy} deposit: ${d.amt} - state: ${d.state} - txId: ${d.txId}`);
+}
+```
+
+## Key parameter types
+
+<AccordionGroup>
+  <Accordion title="FundsTransferRequest">
+
+  ```typescript
+  interface FundsTransferRequest {
+    ccy: string;          // Currency (e.g. 'USDT')
+    amt: string;          // Amount as string
+    from: '6' | '18';    // Source: '6'=funding, '18'=trading
+    to: '6' | '18';      // Destination: '6'=funding, '18'=trading
+    subAcct?: string;     // Sub-account name (for inter-account transfers)
+    type?: '0' | '1' | '2' | '3' | '4'; // Transfer type
+    clientId?: string;    // Client-assigned transfer ID
+  }
+  ```
+
+  </Accordion>
+  <Accordion title="WithdrawRequest">
+
+  ```typescript
+  interface WithdrawRequest {
+    ccy: string;           // Currency to withdraw
+    amt: string;           // Amount
+    dest: '3' | '4';      // '3'=internal transfer, '4'=on-chain
+    toAddr: string;        // Destination address
+    chain?: string;        // Chain name (e.g. 'USDT-ERC20')
+    clientId?: string;     // Client-assigned ID
+    rcvrInfo?: {           // Required for certain regulated entities
+      walletType: 'exchange' | 'private';
+      exchId?: string;
+      rcvrFirstName?: string;
+      rcvrLastName?: string;
+    };
+  }
+  ```
+
+  </Accordion>
+  <Accordion title="GetDepositHistoryRequest">
+
+  ```typescript
+  interface GetDepositHistoryRequest {
+    ccy?: string;       // Filter by currency
+    depId?: string;     // Deposit ID
+    txId?: string;      // On-chain transaction hash
+    type?: '3' | '4';  // '3'=internal, '4'=on-chain
+    state?: '0' | '1' | '2' | '8' | '11' | '12' | '13' | '14' | '17';
+    after?: string;     // Unix ms pagination cursor
+    before?: string;
+    limit?: string;     // Max 100
+  }
+  ```
+
+  </Accordion>
+</AccordionGroup>

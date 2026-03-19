@@ -1,0 +1,161 @@
+---
+title: 'Earn & Finance'
+description: 'Staking, DeFi products, ETH liquid staking, simple earn savings, and fixed/flexible lending.'
+---
+
+Earn and finance endpoints span staking, savings, and lending products. Authentication is required for order placement, redemption, and balance queries. Some public endpoints (APY history, lending offers) do not require credentials.
+
+## Method reference
+
+### On-chain earn / staking
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getStakingOffers(params?)` | GET | Yes | `/api/v5/finance/staking-defi/offers` | Available staking and DeFi offers |
+| `submitStake(params)` | POST | Yes | `/api/v5/finance/staking-defi/purchase` | Stake into a product |
+| `redeemStake(params)` | POST | Yes | `/api/v5/finance/staking-defi/redeem` | Redeem a staking position |
+| `cancelStakingRequest(params)` | POST | Yes | `/api/v5/finance/staking-defi/cancel` | Cancel a pending stake/redeem |
+| `getActiveStakingOrders(params?)` | GET | Yes | `/api/v5/finance/staking-defi/orders-active` | Active earn orders |
+| `getStakingOrderHistory(params?)` | GET | Yes | `/api/v5/finance/staking-defi/orders-history` | Historical earn orders |
+
+### ETH staking
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getETHStakingProductInfo()` | GET | No | `/api/v5/finance/staking-defi/eth/product-info` | ETH staking product details |
+| `purchaseETHStaking(params)` | POST | Yes | `/api/v5/finance/staking-defi/eth/purchase` | Stake ETH |
+| `redeemETHStaking(params)` | POST | Yes | `/api/v5/finance/staking-defi/eth/redeem` | Redeem staked ETH |
+| `cancelRedeemETHStaking(params)` | POST | Yes | `/api/v5/finance/staking-defi/eth/cancel-redeem` | Cancel an ETH redemption |
+| `getETHStakingBalance()` | GET | Yes | `/api/v5/finance/staking-defi/eth/balance` | ETH staking balance |
+| `getETHStakingHistory(params)` | GET | Yes | `/api/v5/finance/staking-defi/eth/purchase-redeem-history` | ETH staking/redemption history |
+| `getAPYHistory(params)` | GET | No | `/api/v5/finance/staking-defi/eth/apy-history` | Historical APY for ETH staking |
+
+### Simple earn (flexible savings)
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getSavingBalance(params?)` | GET | Yes | `/api/v5/finance/savings/balance` | Flexible savings balance |
+| `savingsPurchaseRedemption(params)` | POST | Yes | `/api/v5/finance/savings/purchase-redempt` | Purchase or redeem savings |
+| `setLendingRate(params)` | POST | Yes | `/api/v5/finance/savings/set-lending-rate` | Set minimum lending rate |
+| `getLendingHistory(params?)` | GET | Yes | `/api/v5/finance/savings/lending-history` | Lending earnings history |
+| `getPublicBorrowInfo(params?)` | GET | No | `/api/v5/finance/savings/lending-rate-summary` | Public lending rate summary |
+| `getPublicBorrowHistory(params?)` | GET | No | `/api/v5/finance/savings/lending-rate-history` | Public lending rate history |
+
+### Fixed-term lending
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getLendingOffers(params?)` | GET | No | `/api/v5/finance/fixed-loan/lending-offers` | Available fixed lending offers |
+| `getLendingAPYHistory(params)` | GET | No | `/api/v5/finance/fixed-loan/lending-apy-history` | APY history for fixed lending |
+| `getLendingVolume(params)` | GET | No | `/api/v5/finance/fixed-loan/pending-lending-volume` | Pending lending volume |
+| `placeLendingOrder(params)` | POST | Yes | `/api/v5/finance/fixed-loan/lending-order` | Place a fixed lending order |
+| `amendLendingOrder(params)` | POST | Yes | `/api/v5/finance/fixed-loan/amend-lending-order` | Amend a fixed lending order |
+| `getLendingOrders(params)` | GET | Yes | `/api/v5/finance/fixed-loan/lending-orders-list` | Fixed lending order list |
+| `getLendingSubOrders(params)` | GET | Yes | `/api/v5/finance/fixed-loan/lending-sub-orders` | Fixed lending sub-orders |
+
+### Flexible loan
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getBorrowableCurrencies()` | GET | No | `/api/v5/finance/flexible-loan/borrow-currencies` | Currencies available to borrow |
+| `getCollateralAssets(params?)` | GET | No | `/api/v5/finance/flexible-loan/collateral-assets` | Supported collateral assets |
+| `getMaxLoanAmount(params)` | POST | Yes | `/api/v5/finance/flexible-loan/max-loan` | Maximum borrowable amount |
+| `adjustCollateral(params)` | POST | Yes | `/api/v5/finance/flexible-loan/adjust-collateral` | Adjust collateral |
+| `getLoanInfo()` | GET | Yes | `/api/v5/finance/flexible-loan/loan-info` | Current flexible loan info |
+| `getLoanHistory(params?)` | GET | Yes | `/api/v5/finance/flexible-loan/loan-history` | Flexible loan history |
+| `getAccruedInterest(params?)` | GET | Yes | `/api/v5/finance/flexible-loan/interest-accrued` | Accrued flexible loan interest |
+
+## Examples
+
+### Browse and stake a DeFi product
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+// 1. Find available staking offers for USDT
+const offers = await client.getStakingOffers({ ccy: 'USDT' });
+const offer = offers[0];
+console.log(`Product: ${offer.productId}, APY: ${offer.apy}`);
+
+// 2. Stake 100 USDT into the product
+const [order] = await client.submitStake({
+  productId: offer.productId,
+  investData: [{ ccy: 'USDT', amt: '100' }],
+});
+console.log('Stake order ID:', order.ordId);
+
+// 3. View active orders
+const active = await client.getActiveStakingOrders({ ccy: 'USDT' });
+console.log('Active staking orders:', active.length);
+```
+
+### Redeem a staking position
+
+```typescript
+const [result] = await client.redeemStake({
+  ordId: 'your-order-id',
+  protocolType: 'staking',
+  allowEarlyRedeem: true,
+});
+console.log('Redemption order ID:', result.ordId);
+```
+
+### ETH staking
+
+```typescript
+// Get ETH staking product details (no auth needed)
+const client = new RestClient();
+const productInfo = await client.getETHStakingProductInfo();
+console.log('ETH staking APY:', productInfo[0]?.apy);
+
+// Check historical APY
+const apyHistory = await client.getAPYHistory({ days: '7' });
+for (const entry of apyHistory) {
+  console.log(`${entry.date}: ${entry.apy}`);
+}
+```
+
+```typescript
+// Stake ETH (requires auth)
+const authClient = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+await authClient.purchaseETHStaking({ amt: '0.5' });
+const [ethBalance] = await authClient.getETHStakingBalance();
+console.log('ETH staking balance:', ethBalance.amt);
+```
+
+### Simple earn savings
+
+```typescript
+// Purchase flexible savings
+const [result] = await client.savingsPurchaseRedemption({
+  ccy: 'USDT',
+  amt: '1000',
+  side: 'purchase',
+  rate: '0.01',  // minimum lending rate (1%)
+});
+console.log('Savings amount:', result.amt);
+
+// Check balance
+const savingsBalance = await client.getSavingBalance({ ccy: 'USDT' });
+console.log('Savings:', savingsBalance[0]?.amt);
+console.log('Earnings:', savingsBalance[0]?.earnings);
+
+// Redeem
+await client.savingsPurchaseRedemption({
+  ccy: 'USDT',
+  amt: '1000',
+  side: 'redempt',
+  rate: '0.01',
+});
+```

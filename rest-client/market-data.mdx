@@ -1,0 +1,189 @@
+---
+title: 'Market Data'
+description: 'Public market data endpoints for tickers, candles, order books, trades, funding rates, and system status. No API keys required.'
+---
+
+All methods in this section are public and do not require authentication. Instantiate the client without credentials:
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient();
+```
+
+## Method reference
+
+### Tickers
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getTickers(params)` | GET | `/api/v5/market/tickers` | All tickers for an instrument type |
+| `getTicker(params)` | GET | `/api/v5/market/ticker` | Single instrument ticker |
+| `getIndexTickers(params?)` | GET | `/api/v5/market/index-tickers` | Index tickers |
+
+### Order books
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getOrderBook(params)` | GET | `/api/v5/market/books` | Order book (up to 400 levels) |
+| `getFullOrderBook(params)` | GET | `/api/v5/market/books-full` | Full order book snapshot |
+
+### Candles
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getCandles(params)` | GET | `/api/v5/market/candles` | Recent candlestick data |
+| `getHistoricCandles(params)` | GET | `/api/v5/market/history-candles` | Historical candlestick data |
+| `getIndexCandles(params)` | GET | `/api/v5/market/index-candles` | Index price candles |
+| `getHistoricIndexCandles(params)` | GET | `/api/v5/market/history-index-candles` | Historical index candles |
+| `getMarkPriceCandles(params)` | GET | `/api/v5/market/mark-price-candles` | Mark price candles |
+| `getHistoricMarkPriceCandles(params)` | GET | `/api/v5/market/history-mark-price-candles` | Historical mark price candles |
+
+### Trades
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getTrades(params)` | GET | `/api/v5/market/trades` | Recent trades (up to 500) |
+| `getHistoricTrades(params)` | GET | `/api/v5/market/history-trades` | Historical trade data |
+
+### Instruments and reference data
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getInstruments(params)` | GET | `/api/v5/public/instruments` | Tradable instruments and their specs |
+| `getMarkPrice(params)` | GET | `/api/v5/public/mark-price` | Mark price for derivatives |
+| `getFundingRate(params)` | GET | `/api/v5/public/funding-rate` | Current funding rate for a SWAP |
+| `getFundingRateHistory(params)` | GET | `/api/v5/public/funding-rate-history` | Historical funding rates |
+| `getOpenInterest(params)` | GET | `/api/v5/public/open-interest` | Open interest for derivatives |
+| `getOptionMarketData(params)` | GET | `/api/v5/public/opt-summary` | Options market summary data |
+| `getMinMaxLimitPrice(params)` | GET | `/api/v5/public/price-limit` | Price band limits |
+| `getInsuranceFund(params)` | GET | `/api/v5/public/insurance-fund` | Insurance fund balance |
+| `getDeliveryExerciseHistory(params)` | GET | `/api/v5/public/delivery-exercise-history` | Delivery and exercise history |
+| `getEstimatedDeliveryExercisePrice(params)` | GET | `/api/v5/public/estimated-price` | Estimated settlement price |
+| `getDiscountRateAndInterestFreeQuota(params)` | GET | `/api/v5/public/discount-rate-interest-free-quota` | Discount rate tiers |
+| `getInterestRateAndLoanQuota()` | GET | `/api/v5/public/interest-rate-loan-quota` | Loan quotas and interest rates |
+| `getUnitConvert(params)` | GET | `/api/v5/public/convert-contract-coin` | Convert between contract and coin units |
+
+### System
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getSystemStatus(params)` | GET | `/api/v5/system/status` | Scheduled maintenance and system events |
+| `getSystemTime(params)` | GET | `/api/v5/public/time` | Server timestamp |
+| `getServerTime()` | GET | `/api/v5/public/time` | Server time as a number (ms) |
+
+## Examples
+
+### Query instruments (no API keys needed)
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient();
+
+// Get all SPOT instruments
+const instruments = await client.getInstruments({ instType: 'SPOT' });
+const sui = instruments.find((i) => i.baseCcy === 'SUI');
+console.log('SUI-USDT min size:', sui?.minSz);
+console.log('SUI-USDT tick size:', sui?.tickSz);
+```
+
+### Get a ticker
+
+```typescript
+const client = new RestClient();
+
+// Single ticker
+const [ticker] = await client.getTicker({ instId: 'BTC-USDT' });
+console.log('Last price:', ticker.last);
+console.log('24h volume:', ticker.vol24h);
+console.log('Bid/Ask:', ticker.bidPx, '/', ticker.askPx);
+
+// All SPOT tickers
+const allTickers = await client.getTickers({ instType: 'SPOT' });
+console.log('Total SPOT pairs:', allTickers.length);
+```
+
+### Fetch candles
+
+```typescript
+const client = new RestClient();
+
+// Last 100 hourly candles for BTC-USDT
+const candles = await client.getCandles({
+  instId: 'BTC-USDT',
+  bar: '1H',
+  limit: '100',
+});
+
+// Each candle: [ts, open, high, low, close, vol, volCcy, volCcyQuote, confirm]
+for (const [ts, open, high, low, close] of candles) {
+  console.log(`${new Date(Number(ts)).toISOString()} O:${open} H:${high} L:${low} C:${close}`);
+}
+```
+
+### Get the order book
+
+```typescript
+const client = new RestClient();
+
+const [book] = await client.getOrderBook({
+  instId: 'BTC-USDT',
+  sz: '5',  // depth levels per side (max 400)
+});
+
+console.log('Best ask:', book.asks[0][0], 'qty:', book.asks[0][1]);
+console.log('Best bid:', book.bids[0][0], 'qty:', book.bids[0][1]);
+```
+
+### Get funding rate
+
+```typescript
+const client = new RestClient();
+
+const [rate] = await client.getFundingRate({ instId: 'BTC-USDT-SWAP' });
+console.log('Current funding rate:', rate.fundingRate);
+console.log('Next funding time:', new Date(Number(rate.nextFundingTime)));
+
+// Funding rate history
+const history = await client.getFundingRateHistory({
+  instId: 'BTC-USDT-SWAP',
+  limit: '10',
+});
+for (const h of history) {
+  console.log(`${h.fundingTime}: ${h.fundingRate}`);
+}
+```
+
+### Check system status
+
+```typescript
+const client = new RestClient();
+
+const status = await client.getSystemStatus({});
+for (const event of status) {
+  console.log(`[${event.state}] ${event.title}`);
+  console.log(`  Start: ${event.begin}, End: ${event.end}`);
+}
+```
+
+### Trading statistics
+
+```typescript
+const client = new RestClient();
+
+// Long/short ratio for BTC contracts
+const ratio = await client.getLongShortRatio({
+  ccy: 'BTC',
+  period: '1H',
+});
+console.log('Long/short ratio:', ratio[0]);
+
+// Taker buy/sell volume
+const takerVol = await client.getTakerVolume({
+  instType: 'SPOT',
+  ccy: 'BTC',
+  period: '1H',
+});
+console.log('Taker volume:', takerVol[0]);
+```

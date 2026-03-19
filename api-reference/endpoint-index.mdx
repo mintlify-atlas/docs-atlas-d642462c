@@ -1,0 +1,483 @@
+---
+title: 'Endpoint index'
+description: 'Every REST and WebSocket API endpoint mapped to its SDK method, organised by category.'
+---
+
+This index maps every OKX API endpoint to the corresponding SDK method. Use it to find the right method once you have identified the endpoint you need from the OKX API documentation.
+
+**Auth** — a lock icon indicates the method requires API key, secret, and passphrase to be configured.
+
+---
+
+## RestClient
+
+### Trading account
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getAccountInstruments()` | Yes | GET | `/api/v5/account/instruments` |
+| `getBalance()` | Yes | GET | `/api/v5/account/balance` |
+| `getPositions()` | Yes | GET | `/api/v5/account/positions` |
+| `getPositionsHistory()` | Yes | GET | `/api/v5/account/positions-history` |
+| `getAccountPositionRisk()` | Yes | GET | `/api/v5/account/account-position-risk` |
+| `getBills()` | Yes | GET | `/api/v5/account/bills` |
+| `getBillsArchive()` | Yes | GET | `/api/v5/account/bills-archive` |
+| `requestBillsHistoryDownloadLink()` | Yes | POST | `/api/v5/account/bills-history-archive` |
+| `getRequestedBillsHistoryLink()` | Yes | GET | `/api/v5/account/bills-history-archive` |
+| `getAccountConfiguration()` | Yes | GET | `/api/v5/account/config` |
+| `setPositionMode()` | Yes | POST | `/api/v5/account/set-position-mode` |
+| `setSettleCurrency()` | Yes | POST | `/api/v5/account/set-settle-currency` |
+| `setFeeType()` | Yes | POST | `/api/v5/account/set-fee-type` |
+| `setLeverage()` | Yes | POST | `/api/v5/account/set-leverage` |
+| `getMaxBuySellAmount()` | Yes | GET | `/api/v5/account/max-size` |
+| `getMaxAvailableTradableAmount()` | Yes | GET | `/api/v5/account/max-avail-size` |
+| `changePositionMargin()` | Yes | POST | `/api/v5/account/position/margin-balance` |
+| `getLeverage()` | Yes | GET | `/api/v5/account/leverage-info` |
+| `getLeverageEstimatedInfo()` | Yes | GET | `/api/v5/account/adjust-leverage-info` |
+| `getMaxLoan()` | Yes | GET | `/api/v5/account/max-loan` |
+| `getFeeRates()` | Yes | GET | `/api/v5/account/trade-fee` |
+| `getInterestAccrued()` | Yes | GET | `/api/v5/account/interest-accrued` |
+| `getInterestRate()` | Yes | GET | `/api/v5/account/interest-rate` |
+| `setGreeksDisplayType()` | Yes | POST | `/api/v5/account/set-greeks` |
+| `setIsolatedMode()` | Yes | POST | `/api/v5/account/set-isolated-mode` |
+| `getMaxWithdrawals()` | Yes | GET | `/api/v5/account/max-withdrawal` |
+| `getAccountRiskState()` | Yes | GET | `/api/v5/account/risk-state` |
+| `setAccountCollateralAssets()` | Yes | POST | `/api/v5/account/set-collateral-assets` |
+| `getAccountCollateralAssets()` | Yes | GET | `/api/v5/account/collateral-assets` |
+| `submitQuickMarginBorrowRepay()` | Yes | POST | `/api/v5/account/quick-margin-borrow-repay` |
+| `getQuickMarginBorrowRepayHistory()` | Yes | GET | `/api/v5/account/quick-margin-borrow-repay-history` |
+| `borrowRepayVIPLoan()` | Yes | POST | `/api/v5/account/borrow-repay` |
+| `getVIPLoanBorrowRepayHistory()` | Yes | GET | `/api/v5/account/borrow-repay-history` |
+| `getVIPInterestAccrued()` | Yes | GET | `/api/v5/account/vip-interest-accrued` |
+| `getVIPInterestDeducted()` | Yes | GET | `/api/v5/account/vip-interest-deducted` |
+| `getVIPLoanOrders()` | Yes | GET | `/api/v5/account/vip-loan-order-list` |
+| `getVIPLoanOrder()` | Yes | GET | `/api/v5/account/vip-loan-order-detail` |
+| `getBorrowInterestLimits()` | Yes | GET | `/api/v5/account/interest-limits` |
+| `getFixedLoanBorrowLimit()` | Yes | GET | `/api/v5/account/fixed-loan/borrowing-limit` |
+| `getFixedLoanBorrowQuote()` | Yes | GET | `/api/v5/account/fixed-loan/borrowing-quote` |
+| `submitFixedLoanBorrowOrder()` | Yes | POST | `/api/v5/account/fixed-loan/borrowing-order` |
+| `updateFixedLoanBorrowOrder()` | Yes | POST | `/api/v5/account/fixed-loan/amend-borrowing-order` |
+| `manualRenewFixedLoanBorrowOrder()` | Yes | POST | `/api/v5/account/fixed-loan/manual-reborrow` |
+| `repayFixedLoanBorrowOrder()` | Yes | POST | `/api/v5/account/fixed-loan/repay-borrowing-order` |
+| `convertFixedLoanToMarketLoan()` | Yes | POST | `/api/v5/account/fixed-loan/convert-to-market-loan` |
+| `reduceFixedLoanLiabilities()` | Yes | POST | `/api/v5/account/fixed-loan/reduce-liabilities` |
+| `getFixedLoanBorrowOrders()` | Yes | GET | `/api/v5/account/fixed-loan/borrowing-orders-list` |
+| `manualBorrowRepay()` | Yes | POST | `/api/v5/account/spot-manual-borrow-repay` |
+| `setAutoRepay()` | Yes | POST | `/api/v5/account/set-auto-repay` |
+| `getBorrowRepayHistory()` | Yes | GET | `/api/v5/account/spot-borrow-repay-history` |
+| `positionBuilder()` | Yes | POST | `/api/v5/account/position-builder` |
+| `updateRiskOffsetAmount()` | Yes | POST | `/api/v5/account/set-riskOffset-amt` |
+| `getGreeks()` | Yes | GET | `/api/v5/account/greeks` |
+| `getPMLimitation()` | Yes | GET | `/api/v5/account/position-tiers` |
+| `updateRiskOffsetType()` | Yes | POST | `/api/v5/account/set-riskOffset-type` |
+| `activateOption()` | Yes | POST | `/api/v5/account/activate-option` |
+| `setAutoLoan()` | Yes | POST | `/api/v5/account/set-auto-loan` |
+| `presetAccountLevelSwitch()` | Yes | POST | `/api/v5/account/account-level-switch-preset` |
+| `getAccountSwitchPrecheck()` | Yes | GET | `/api/v5/account/set-account-switch-precheck` |
+| `setAccountMode()` | Yes | POST | `/api/v5/account/set-account-level` |
+| `resetMMPStatus()` | Yes | POST | `/api/v5/account/mmp-reset` |
+| `setMMPConfig()` | Yes | POST | `/api/v5/account/mmp-config` |
+| `getMMPConfig()` | Yes | GET | `/api/v5/account/mmp-config` |
+| `setTradingConfig()` | Yes | POST | `/api/v5/account/set-trading-config` |
+| `precheckSetDeltaNeutral()` | Yes | GET | `/api/v5/account/precheck-set-delta-neutral` |
+
+---
+
+### Order trading
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `submitOrder()` | Yes | POST | `/api/v5/trade/order` |
+| `submitMultipleOrders()` | Yes | POST | `/api/v5/trade/batch-orders` |
+| `cancelOrder()` | Yes | POST | `/api/v5/trade/cancel-order` |
+| `cancelMultipleOrders()` | Yes | POST | `/api/v5/trade/cancel-batch-orders` |
+| `amendOrder()` | Yes | POST | `/api/v5/trade/amend-order` |
+| `amendMultipleOrders()` | Yes | POST | `/api/v5/trade/amend-batch-orders` |
+| `closePositions()` | Yes | POST | `/api/v5/trade/close-position` |
+| `getOrderDetails()` | Yes | GET | `/api/v5/trade/order` |
+| `getOrderList()` | Yes | GET | `/api/v5/trade/orders-pending` |
+| `getOrderHistory()` | Yes | GET | `/api/v5/trade/orders-history` |
+| `getOrderHistoryArchive()` | Yes | GET | `/api/v5/trade/orders-history-archive` |
+| `getFills()` | Yes | GET | `/api/v5/trade/fills` |
+| `getFillsHistory()` | Yes | GET | `/api/v5/trade/fills-history` |
+| `getEasyConvertCurrencies()` | Yes | GET | `/api/v5/trade/easy-convert-currency-list` |
+| `submitEasyConvert()` | Yes | POST | `/api/v5/trade/easy-convert` |
+| `getEasyConvertHistory()` | Yes | GET | `/api/v5/trade/easy-convert-history` |
+| `getOneClickRepayCurrencyList()` | Yes | GET | `/api/v5/trade/one-click-repay-currency-list` |
+| `submitOneClickRepay()` | Yes | POST | `/api/v5/trade/one-click-repay` |
+| `getOneClickRepayHistory()` | Yes | GET | `/api/v5/trade/one-click-repay-history` |
+| `cancelMassOrder()` | Yes | POST | `/api/v5/trade/mass-cancel` |
+| `cancelAllAfter()` | Yes | POST | `/api/v5/trade/cancel-all-after` |
+| `getAccountRateLimit()` | Yes | GET | `/api/v5/trade/account-rate-limit` |
+| `submitOrderPrecheck()` | Yes | POST | `/api/v5/trade/order-precheck` |
+| `placeAlgoOrder()` | Yes | POST | `/api/v5/trade/order-algo` |
+| `cancelAlgoOrder()` | Yes | POST | `/api/v5/trade/cancel-algos` |
+| `amendAlgoOrder()` | Yes | POST | `/api/v5/trade/amend-algos` |
+| `cancelAdvanceAlgoOrder()` | Yes | POST | `/api/v5/trade/cancel-advance-algos` |
+| `getAlgoOrderDetails()` | Yes | GET | `/api/v5/trade/order-algo` |
+| `getAlgoOrderList()` | Yes | GET | `/api/v5/trade/orders-algo-pending` |
+| `getAlgoOrderHistory()` | Yes | GET | `/api/v5/trade/orders-algo-history` |
+
+---
+
+### Grid trading
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `placeGridAlgoOrder()` | Yes | POST | `/api/v5/tradingBot/grid/order-algo` |
+| `amendGridAlgoOrder()` | Yes | POST | `/api/v5/tradingBot/grid/amend-order-algo` |
+| `stopGridAlgoOrder()` | Yes | POST | `/api/v5/tradingBot/grid/stop-order-algo` |
+| `closeGridContractPosition()` | Yes | POST | `/api/v5/tradingBot/grid/close-position` |
+| `cancelGridContractCloseOrder()` | Yes | POST | `/api/v5/tradingBot/grid/cancel-close-order` |
+| `instantTriggerGridAlgoOrder()` | Yes | POST | `/api/v5/tradingBot/grid/order-instant-trigger` |
+| `getGridAlgoOrderList()` | Yes | GET | `/api/v5/tradingBot/grid/orders-algo-pending` |
+| `getGridAlgoOrderHistory()` | Yes | GET | `/api/v5/tradingBot/grid/orders-algo-history` |
+| `getGridAlgoOrderDetails()` | Yes | GET | `/api/v5/tradingBot/grid/orders-algo-details` |
+| `getGridAlgoSubOrders()` | Yes | GET | `/api/v5/tradingBot/grid/sub-orders` |
+| `getGridAlgoOrderPositions()` | Yes | GET | `/api/v5/tradingBot/grid/positions` |
+| `spotGridWithdrawIncome()` | Yes | POST | `/api/v5/tradingBot/grid/withdraw-income` |
+| `computeGridMarginBalance()` | Yes | POST | `/api/v5/tradingBot/grid/compute-margin-balance` |
+| `adjustGridMarginBalance()` | Yes | POST | `/api/v5/tradingBot/grid/margin-balance` |
+| `adjustGridInvestment()` | Yes | POST | `/api/v5/tradingBot/grid/adjust-investment` |
+| `getGridAIParameter()` | No | GET | `/api/v5/tradingBot/grid/ai-param` |
+| `computeGridMinInvestment()` | No | POST | `/api/v5/tradingBot/grid/min-investment` |
+| `getRSIBackTesting()` | No | GET | `/api/v5/tradingBot/public/rsi-back-testing` |
+| `getMaxGridQuantity()` | No | GET | `/api/v5/tradingBot/grid/grid-quantity` |
+
+---
+
+### Signal bots
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `createSignal()` | Yes | POST | `/api/v5/tradingBot/signal/create-signal` |
+| `getSignals()` | Yes | GET | `/api/v5/tradingBot/signal/signals` |
+| `createSignalBot()` | Yes | POST | `/api/v5/tradingBot/signal/order-algo` |
+| `cancelSignalBots()` | Yes | POST | `/api/v5/tradingBot/signal/stop-order-algo` |
+| `updateSignalMargin()` | Yes | POST | `/api/v5/tradingBot/signal/margin-balance` |
+| `updateSignalTPSL()` | Yes | POST | `/api/v5/tradingBot/signal/amendTPSL` |
+| `setSignalInstruments()` | Yes | POST | `/api/v5/tradingBot/signal/set-instruments` |
+| `getSignalBotOrder()` | Yes | GET | `/api/v5/tradingBot/signal/orders-algo-details` |
+| `getActiveSignalBot()` | Yes | GET | `/api/v5/tradingBot/signal/orders-algo-details` |
+| `getSignalBotHistory()` | Yes | GET | `/api/v5/tradingBot/signal/orders-algo-history` |
+| `getSignalBotPositions()` | Yes | GET | `/api/v5/tradingBot/signal/positions` |
+| `getSignalBotPositionHistory()` | Yes | GET | `/api/v5/tradingBot/signal/positions-history` |
+| `closeSignalBotPosition()` | Yes | POST | `/api/v5/tradingBot/signal/close-position` |
+| `placeSignalBotSubOrder()` | Yes | POST | `/api/v5/tradingBot/signal/sub-order` |
+| `cancelSubOrder()` | Yes | POST | `/api/v5/tradingBot/signal/cancel-sub-order` |
+| `getSignalBotSubOrders()` | Yes | GET | `/api/v5/tradingBot/signal/sub-orders` |
+| `getSignalBotEventHistory()` | Yes | GET | `/api/v5/tradingBot/signal/event-history` |
+
+---
+
+### Recurring buy
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `submitRecurringBuyOrder()` | Yes | POST | `/api/v5/tradingBot/recurring/order-algo` |
+| `amendRecurringBuyOrder()` | Yes | POST | `/api/v5/tradingBot/recurring/amend-order-algo` |
+| `stopRecurringBuyOrder()` | Yes | POST | `/api/v5/tradingBot/recurring/stop-order-algo` |
+| `getRecurringBuyOrders()` | Yes | GET | `/api/v5/tradingBot/recurring/orders-algo-pending` |
+| `getRecurringBuyOrderHistory()` | Yes | GET | `/api/v5/tradingBot/recurring/orders-algo-history` |
+| `getRecurringBuyOrderDetails()` | Yes | GET | `/api/v5/tradingBot/recurring/orders-algo-details` |
+| `getRecurringBuySubOrders()` | Yes | GET | `/api/v5/tradingBot/recurring/sub-orders` |
+
+---
+
+### Copy trading
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getCopytradingSubpositions()` | Yes | GET | `/api/v5/copytrading/current-subpositions` |
+| `getCopytradingSubpositionsHistory()` | Yes | GET | `/api/v5/copytrading/subpositions-history` |
+| `submitCopytradingAlgoOrder()` | Yes | POST | `/api/v5/copytrading/algo-order` |
+| `closeCopytradingSubposition()` | Yes | POST | `/api/v5/copytrading/close-subposition` |
+| `getCopytradingInstruments()` | Yes | GET | `/api/v5/copytrading/instruments` |
+| `setCopytradingInstruments()` | Yes | POST | `/api/v5/copytrading/set-instruments` |
+| `getCopytradingProfitDetails()` | Yes | GET | `/api/v5/copytrading/profit-sharing-details` |
+| `getCopytradingTotalProfit()` | Yes | GET | `/api/v5/copytrading/total-profit-sharing` |
+| `getCopytradingUnrealizedProfit()` | Yes | GET | `/api/v5/copytrading/unrealized-profit-sharing-details` |
+| `getCopytradingTotalUnrealizedProfit()` | Yes | GET | `/api/v5/copytrading/total-unrealized-profit-sharing` |
+| `applyCopytradingLeadTrading()` | Yes | POST | `/api/v5/copytrading/apply-lead-trading` |
+| `stopCopytradingLeadTrading()` | Yes | POST | `/api/v5/copytrading/stop-lead-trading` |
+| `updateCopytradingProfitSharing()` | Yes | POST | `/api/v5/copytrading/amend-profit-sharing-ratio` |
+| `getCopytradingAccount()` | Yes | GET | `/api/v5/copytrading/config` |
+| `setCopytradingFirstCopy()` | Yes | POST | `/api/v5/copytrading/first-copy-settings` |
+| `updateCopytradingCopySettings()` | Yes | POST | `/api/v5/copytrading/amend-copy-settings` |
+| `stopCopytradingCopy()` | Yes | POST | `/api/v5/copytrading/stop-copy-trading` |
+| `getCopytradingCopySettings()` | Yes | GET | `/api/v5/copytrading/copy-settings` |
+| `getCopytradingBatchLeverageInfo()` | Yes | GET | `/api/v5/copytrading/batch-leverage-info` |
+| `setCopytradingBatchLeverage()` | Yes | POST | `/api/v5/copytrading/batch-set-leverage` |
+| `getCopytradingMyLeadTraders()` | Yes | GET | `/api/v5/copytrading/current-lead-traders` |
+| `getCopytradingLeadTradersHistory()` | Yes | GET | `/api/v5/copytrading/lead-traders-history` |
+| `getCopytradingConfig()` | No | GET | `/api/v5/copytrading/public-config` |
+| `getCopytradingLeadRanks()` | No | GET | `/api/v5/copytrading/public-lead-traders` |
+| `getCopytradingLeadWeeklyPnl()` | No | GET | `/api/v5/copytrading/public-weekly-pnl` |
+| `getCopytradingLeadDailyPnl()` | No | GET | `/api/v5/copytrading/public-pnl` |
+| `getCopytradingLeadStats()` | No | GET | `/api/v5/copytrading/public-stats` |
+| `getCopytradingLeadPreferences()` | No | GET | `/api/v5/copytrading/public-preference-currency` |
+| `getCopytradingLeadOpenPositions()` | No | GET | `/api/v5/copytrading/public-current-subpositions` |
+| `getCopytradingLeadPositionHistory()` | No | GET | `/api/v5/copytrading/public-subpositions-history` |
+| `getCopyTraders()` | No | GET | `/api/v5/copytrading/public-copy-traders` |
+| `getCopytradingLeadPrivateRanks()` | Yes | GET | `/api/v5/copytrading/lead-traders` |
+| `getCopytradingLeadPrivateWeeklyPnl()` | Yes | GET | `/api/v5/copytrading/weekly-pnl` |
+| `getCopytradingPLeadPrivateDailyPnl()` | Yes | GET | `/api/v5/copytrading/pnl` |
+| `geCopytradingLeadPrivateStats()` | Yes | GET | `/api/v5/copytrading/stats` |
+| `getCopytradingLeadPrivatePreferences()` | Yes | GET | `/api/v5/copytrading/preference-currency` |
+| `getCopytradingLeadPrivateOpenPositions()` | Yes | GET | `/api/v5/copytrading/performance-current-subpositions` |
+| `getCopytradingLeadPrivatePositionHistory()` | Yes | GET | `/api/v5/copytrading/performance-subpositions-history` |
+| `getCopyTradersPrivate()` | Yes | GET | `/api/v5/copytrading/copy-traders` |
+
+---
+
+### Market data
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getTickers()` | No | GET | `/api/v5/market/tickers` |
+| `getTicker()` | No | GET | `/api/v5/market/ticker` |
+| `getOrderBook()` | No | GET | `/api/v5/market/books` |
+| `getFullOrderBook()` | No | GET | `/api/v5/market/books-full` |
+| `getCandles()` | No | GET | `/api/v5/market/candles` |
+| `getHistoricCandles()` | No | GET | `/api/v5/market/history-candles` |
+| `getTrades()` | No | GET | `/api/v5/market/trades` |
+| `getHistoricTrades()` | No | GET | `/api/v5/market/history-trades` |
+| `getOptionTradesByInstrument()` | No | GET | `/api/v5/market/option/instrument-family-trades` |
+| `getOptionTrades()` | No | GET | `/api/v5/public/option-trades` |
+| `get24hrTotalVolume()` | No | GET | `/api/v5/market/platform-24-volume` |
+| `getBlockTickers()` | No | GET | `/api/v5/market/block-tickers` |
+| `getBlockTicker()` | No | GET | `/api/v5/market/block-ticker` |
+| `getBlockPublicTrades()` | No | GET | `/api/v5/public/block-trades` |
+| `getPublicBlockTrades()` | No | GET | `/api/v5/market/block-trades` |
+| `getIndexTickers()` | No | GET | `/api/v5/market/index-tickers` |
+| `getIndexCandles()` | No | GET | `/api/v5/market/index-candles` |
+| `getHistoricIndexCandles()` | No | GET | `/api/v5/market/history-index-candles` |
+| `getMarkPriceCandles()` | No | GET | `/api/v5/market/mark-price-candles` |
+| `getHistoricMarkPriceCandles()` | No | GET | `/api/v5/market/history-mark-price-candles` |
+| `getOracle()` | No | GET | `/api/v5/market/open-oracle` |
+| `getExchangeRate()` | No | GET | `/api/v5/market/exchange-rate` |
+| `getIndexComponents()` | No | GET | `/api/v5/market/index-components` |
+| `getPublicBorrowInfo()` | No | GET | `/api/v5/finance/savings/lending-rate-summary` |
+| `getPublicBorrowHistory()` | No | GET | `/api/v5/finance/savings/lending-rate-history` |
+
+---
+
+### Public data
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getInstruments()` | No | GET | `/api/v5/public/instruments` |
+| `getDeliveryExerciseHistory()` | No | GET | `/api/v5/public/delivery-exercise-history` |
+| `getOpenInterest()` | No | GET | `/api/v5/public/open-interest` |
+| `getFundingRate()` | No | GET | `/api/v5/public/funding-rate` |
+| `getFundingRateHistory()` | No | GET | `/api/v5/public/funding-rate-history` |
+| `getMinMaxLimitPrice()` | No | GET | `/api/v5/public/price-limit` |
+| `getOptionMarketData()` | No | GET | `/api/v5/public/opt-summary` |
+| `getEstimatedDeliveryExercisePrice()` | No | GET | `/api/v5/public/estimated-price` |
+| `getDiscountRateAndInterestFreeQuota()` | No | GET | `/api/v5/public/discount-rate-interest-free-quota` |
+| `getSystemTime()` | No | GET | `/api/v5/public/time` |
+| `getMarkPrice()` | No | GET | `/api/v5/public/mark-price` |
+| `getPositionTiers()` | No | GET | `/api/v5/public/position-tiers` |
+| `getInterestRateAndLoanQuota()` | No | GET | `/api/v5/public/interest-rate-loan-quota` |
+| `getVIPInterestRateAndLoanQuota()` | No | GET | `/api/v5/public/vip-interest-rate-loan-quota` |
+| `getUnderlying()` | No | GET | `/api/v5/public/underlying` |
+| `getInsuranceFund()` | No | GET | `/api/v5/public/insurance-fund` |
+| `getUnitConvert()` | No | GET | `/api/v5/public/convert-contract-coin` |
+| `getOptionTickBands()` | No | GET | `/api/v5/public/instrument-tick-bands` |
+| `getPremiumHistory()` | No | GET | `/api/v5/public/premium-history` |
+| `getEconomicCalendar()` | Yes | GET | `/api/v5/public/economic-calendar` |
+
+---
+
+### Trading data (Rubik)
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getSupportCoin()` | No | GET | `/api/v5/rubik/stat/trading-data/support-coin` |
+| `getOpenInterestHistory()` | No | GET | `/api/v5/rubik/stat/contracts/open-interest-history` |
+| `getTakerVolume()` | No | GET | `/api/v5/rubik/stat/taker-volume` |
+| `getContractTakerVolume()` | No | GET | `/api/v5/rubik/stat/taker-volume-contract` |
+| `getMarginLendingRatio()` | No | GET | `/api/v5/rubik/stat/margin/loan-ratio` |
+| `getTopTradersAccountRatio()` | No | GET | `/api/v5/rubik/stat/contracts/long-short-account-ratio-contract-top-trader` |
+| `getTopTradersContractPositionRatio()` | No | GET | `/api/v5/rubik/stat/contracts/long-short-position-ratio-contract-top-trader` |
+| `getLongShortContractRatio()` | No | GET | `/api/v5/rubik/stat/contracts/long-short-account-ratio-contract` |
+| `getLongShortRatio()` | No | GET | `/api/v5/rubik/stat/contracts/long-short-account-ratio` |
+| `getContractsOpenInterestAndVolume()` | No | GET | `/api/v5/rubik/stat/contracts/open-interest-volume` |
+| `getOptionsOpenInterestAndVolume()` | No | GET | `/api/v5/rubik/stat/option/open-interest-volume` |
+| `getPutCallRatio()` | No | GET | `/api/v5/rubik/stat/option/open-interest-volume-ratio` |
+| `getOpenInterestAndVolumeExpiry()` | No | GET | `/api/v5/rubik/stat/option/open-interest-volume-expiry` |
+| `getOpenInterestAndVolumeStrike()` | No | GET | `/api/v5/rubik/stat/option/open-interest-volume-strike` |
+| `getTakerFlow()` | No | GET | `/api/v5/rubik/stat/option/taker-block-volume` |
+
+---
+
+### Funding
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getCurrencies()` | Yes | GET | `/api/v5/asset/currencies` |
+| `getBalances()` | Yes | GET | `/api/v5/asset/balances` |
+| `getNonTradableAssets()` | Yes | GET | `/api/v5/asset/non-tradable-assets` |
+| `getAccountAssetValuation()` | Yes | GET | `/api/v5/asset/asset-valuation` |
+| `fundsTransfer()` | Yes | POST | `/api/v5/asset/transfer` |
+| `getFundsTransferState()` | Yes | GET | `/api/v5/asset/transfer-state` |
+| `getAssetBillsDetails()` | Yes | GET | `/api/v5/asset/bills` |
+| `getAssetBillsHistoric()` | Yes | GET | `/api/v5/asset/bills-history` |
+| `getLightningDeposits()` | Yes | GET | `/api/v5/asset/deposit-lightning` |
+| `getDepositAddress()` | Yes | GET | `/api/v5/asset/deposit-address` |
+| `getDepositHistory()` | Yes | GET | `/api/v5/asset/deposit-history` |
+| `submitWithdraw()` | Yes | POST | `/api/v5/asset/withdrawal` |
+| `submitWithdrawLightning()` | Yes | POST | `/api/v5/asset/withdrawal-lightning` |
+| `cancelWithdrawal()` | Yes | POST | `/api/v5/asset/cancel-withdrawal` |
+| `getWithdrawalHistory()` | Yes | GET | `/api/v5/asset/withdrawal-history` |
+| `getDepositWithdrawStatus()` | Yes | GET | `/api/v5/asset/deposit-withdraw-status` |
+| `getExchanges()` | No | GET | `/api/v5/asset/exchange-list` |
+| `applyForMonthlyStatement()` | Yes | POST | `/api/v5/asset/monthly-statement` |
+| `getMonthlyStatement()` | Yes | GET | `/api/v5/asset/monthly-statement` |
+| `getConvertCurrencies()` | Yes | GET | `/api/v5/asset/convert/currencies` |
+| `getConvertCurrencyPair()` | Yes | GET | `/api/v5/asset/convert/currency-pair` |
+| `estimateConvertQuote()` | Yes | POST | `/api/v5/asset/convert/estimate-quote` |
+| `convertTrade()` | Yes | POST | `/api/v5/asset/convert/trade` |
+| `getConvertHistory()` | Yes | GET | `/api/v5/asset/convert/history` |
+
+---
+
+### Subaccounts
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getSubAccountList()` | Yes | GET | `/api/v5/users/subaccount/list` |
+| `resetSubAccountAPIKey()` | Yes | POST | `/api/v5/users/subaccount/modify-apikey` |
+| `getSubAccountBalances()` | Yes | GET | `/api/v5/account/subaccount/balances` |
+| `getSubAccountFundingBalances()` | Yes | GET | `/api/v5/asset/subaccount/balances` |
+| `getSubAccountMaxWithdrawal()` | Yes | GET | `/api/v5/account/subaccount/max-withdrawal` |
+| `getSubAccountTransferHistory()` | Yes | GET | `/api/v5/asset/subaccount/bills` |
+| `getManagedSubAccountTransferHistory()` | Yes | GET | `/api/v5/asset/subaccount/managed-subaccount-bills` |
+| `transferSubAccountBalance()` | Yes | POST | `/api/v5/asset/subaccount/transfer` |
+| `setSubAccountTransferOutPermission()` | Yes | POST | `/api/v5/users/subaccount/set-transfer-out` |
+| `getSubAccountCustodyTradingList()` | Yes | GET | `/api/v5/users/entrust-subaccount-list` |
+| `setSubAccountLoanAllocation()` | Yes | POST | `/api/v5/account/subaccount/set-loan-allocation` |
+| `getSubAccountBorrowInterestAndLimit()` | Yes | GET | `/api/v5/account/subaccount/interest-limits` |
+| `createSubAccount()` | Yes | POST | `/api/v5/broker/nd/create-subaccount` |
+| `deleteSubAccount()` | Yes | POST | `/api/v5/broker/nd/delete-subaccount` |
+| `createSubAccountAPIKey()` | Yes | POST | `/api/v5/broker/nd/subaccount/apikey` |
+
+---
+
+### Block trading (RFQ)
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getBlockCounterParties()` | Yes | GET | `/api/v5/rfq/counterparties` |
+| `createBlockRFQ()` | Yes | POST | `/api/v5/rfq/create-rfq` |
+| `cancelBlockRFQ()` | Yes | POST | `/api/v5/rfq/cancel-rfq` |
+| `cancelMultipleBlockRFQs()` | Yes | POST | `/api/v5/rfq/cancel-batch-rfqs` |
+| `cancelAllRFQs()` | Yes | POST | `/api/v5/rfq/cancel-all-rfqs` |
+| `executeBlockQuote()` | Yes | POST | `/api/v5/rfq/execute-quote` |
+| `getQuoteProducts()` | Yes | GET | `/api/v5/rfq/maker-instrument-settings` |
+| `updateBlockQuoteProducts()` | Yes | POST | `/api/v5/rfq/maker-instrument-settings` |
+| `resetBlockMmp()` | Yes | POST | `/api/v5/rfq/mmp-reset` |
+| `updateBlockMmpConfig()` | Yes | POST | `/api/v5/rfq/mmp-config` |
+| `getBlockMmpConfig()` | Yes | GET | `/api/v5/rfq/mmp-config` |
+| `createBlockQuote()` | Yes | POST | `/api/v5/rfq/create-quote` |
+| `cancelBlockQuote()` | Yes | POST | `/api/v5/rfq/cancel-quote` |
+| `cancelMultipleBlockQuotes()` | Yes | POST | `/api/v5/rfq/cancel-batch-quotes` |
+| `cancelAllBlockQuotes()` | Yes | POST | `/api/v5/rfq/cancel-all-quotes` |
+| `cancelAllBlockAfter()` | Yes | POST | `/api/v5/rfq/cancel-all-after` |
+| `getBlockRFQs()` | Yes | GET | `/api/v5/rfq/rfqs` |
+| `getBlockQuotes()` | Yes | GET | `/api/v5/rfq/quotes` |
+| `getBlockTrades()` | Yes | GET | `/api/v5/rfq/trades` |
+| `getPublicRFQBlockTrades()` | No | GET | `/api/v5/rfq/public-trades` |
+
+---
+
+### Spread trading
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `submitSpreadOrder()` | Yes | POST | `/api/v5/sprd/order` |
+| `cancelSpreadOrder()` | Yes | POST | `/api/v5/sprd/cancel-order` |
+| `cancelAllSpreadOrders()` | Yes | POST | `/api/v5/sprd/mass-cancel` |
+| `updateSpreadOrder()` | Yes | POST | `/api/v5/sprd/amend-order` |
+| `getSpreadOrder()` | Yes | GET | `/api/v5/sprd/order` |
+| `getSpreadActiveOrders()` | Yes | GET | `/api/v5/sprd/orders-pending` |
+| `getSpreadOrdersRecent()` | Yes | GET | `/api/v5/sprd/orders-history` |
+| `getSpreadOrdersArchive()` | Yes | GET | `/api/v5/sprd/orders-history-archive` |
+| `getSpreadTrades()` | Yes | GET | `/api/v5/sprd/trades` |
+| `getSpreads()` | No | GET | `/api/v5/sprd/spreads` |
+| `getSpreadOrderBook()` | No | GET | `/api/v5/sprd/books` |
+| `getSpreadTicker()` | No | GET | `/api/v5/market/sprd-ticker` |
+| `getSpreadPublicTrades()` | No | GET | `/api/v5/sprd/public-trades` |
+| `getSpreadCandles()` | No | GET | `/api/v5/market/sprd-candles` |
+| `getSpreadHistoryCandles()` | No | GET | `/api/v5/market/sprd-history-candles` |
+| `cancelSpreadAllAfter()` | Yes | POST | `/api/v5/sprd/cancel-all-after` |
+
+---
+
+### Earn and finance
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getStakingOffers()` | Yes | GET | `/api/v5/finance/staking-defi/offers` |
+| `submitStake()` | Yes | POST | `/api/v5/finance/staking-defi/purchase` |
+| `redeemStake()` | Yes | POST | `/api/v5/finance/staking-defi/redeem` |
+| `cancelStakingRequest()` | Yes | POST | `/api/v5/finance/staking-defi/cancel` |
+| `getActiveStakingOrders()` | Yes | GET | `/api/v5/finance/staking-defi/orders-active` |
+| `getStakingOrderHistory()` | Yes | GET | `/api/v5/finance/staking-defi/orders-history` |
+| `getETHStakingProductInfo()` | No | GET | `/api/v5/finance/staking-defi/eth/product-info` |
+| `purchaseETHStaking()` | Yes | POST | `/api/v5/finance/staking-defi/eth/purchase` |
+| `redeemETHStaking()` | Yes | POST | `/api/v5/finance/staking-defi/eth/redeem` |
+| `getETHStakingBalance()` | Yes | GET | `/api/v5/finance/staking-defi/eth/balance` |
+| `getETHStakingHistory()` | Yes | GET | `/api/v5/finance/staking-defi/eth/purchase-redeem-history` |
+| `cancelRedeemETHStaking()` | Yes | POST | `/api/v5/finance/staking-defi/eth/cancel-redeem` |
+| `getAPYHistory()` | No | GET | `/api/v5/finance/staking-defi/eth/apy-history` |
+| `getSavingBalance()` | Yes | GET | `/api/v5/finance/savings/balance` |
+| `savingsPurchaseRedemption()` | Yes | POST | `/api/v5/finance/savings/purchase-redempt` |
+| `setLendingRate()` | Yes | POST | `/api/v5/finance/savings/set-lending-rate` |
+| `getLendingHistory()` | Yes | GET | `/api/v5/finance/savings/lending-history` |
+| `getLendingOffers()` | No | GET | `/api/v5/finance/fixed-loan/lending-offers` |
+| `getLendingAPYHistory()` | No | GET | `/api/v5/finance/fixed-loan/lending-apy-history` |
+| `getLendingVolume()` | No | GET | `/api/v5/finance/fixed-loan/pending-lending-volume` |
+| `placeLendingOrder()` | Yes | POST | `/api/v5/finance/fixed-loan/lending-order` |
+| `amendLendingOrder()` | Yes | POST | `/api/v5/finance/fixed-loan/amend-lending-order` |
+| `getLendingOrders()` | Yes | GET | `/api/v5/finance/fixed-loan/lending-orders-list` |
+| `getLendingSubOrders()` | Yes | GET | `/api/v5/finance/fixed-loan/lending-sub-orders` |
+| `getBorrowableCurrencies()` | No | GET | `/api/v5/finance/flexible-loan/borrow-currencies` |
+| `getCollateralAssets()` | No | GET | `/api/v5/finance/flexible-loan/collateral-assets` |
+| `getMaxLoanAmount()` | Yes | POST | `/api/v5/finance/flexible-loan/max-loan` |
+| `adjustCollateral()` | Yes | POST | `/api/v5/finance/flexible-loan/adjust-collateral` |
+| `getLoanInfo()` | Yes | GET | `/api/v5/finance/flexible-loan/loan-info` |
+| `getLoanHistory()` | Yes | GET | `/api/v5/finance/flexible-loan/loan-history` |
+| `getAccruedInterest()` | Yes | GET | `/api/v5/finance/flexible-loan/interest-accrued` |
+
+---
+
+### Affiliate and system
+
+| Method | Auth | HTTP | Endpoint |
+|--------|:----:|:----:|----------|
+| `getInviteeDetail()` | Yes | GET | `/api/v5/affiliate/invitee/detail` |
+| `getAffiliateRebateInfo()` | Yes | GET | `/api/v5/users/partner/if-rebate` |
+| `getSystemStatus()` | No | GET | `/api/v5/system/status` |
+| `getAnnouncements()` | No | GET | `/api/v5/support/announcements` |
+| `getAnnouncementTypes()` | No | GET | `/api/v5/support/announcement-types` |
+
+---
+
+## WebsocketAPIClient
+
+The `WebsocketAPIClient` provides WebSocket API endpoints for low-latency order management. All methods require authentication and use a persistent WebSocket connection.
+
+| Method | Auth | WS connection | OKX operation |
+|--------|:----:|:-------------:|---------------|
+| `submitNewOrder()` | Yes | private | `order` |
+| `submitMultipleOrders()` | Yes | private | `batch-orders` |
+| `cancelOrder()` | Yes | private | `cancel-order` |
+| `cancelMultipleOrders()` | Yes | private | `batch-cancel-orders` |
+| `amendOrder()` | Yes | private | `amend-order` |
+| `amendMultipleOrders()` | Yes | private | `batch-amend-orders` |
+| `massCancelOrders()` | Yes | private | `mass-cancel` |
+| `submitSpreadOrder()` | Yes | business | `sprd-order` |
+| `amendSpreadOrder()` | Yes | business | `sprd-amend-order` |
+| `cancelSpreadOrder()` | Yes | business | `sprd-cancel-order` |
+| `massCancelSpreadOrders()` | Yes | business | `sprd-mass-cancel` |

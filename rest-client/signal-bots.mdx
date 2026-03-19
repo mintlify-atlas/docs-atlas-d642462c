@@ -1,0 +1,133 @@
+---
+title: 'Signal Bots'
+description: 'Create signal sources, deploy and manage signal-driven trading bots, track positions, and handle sub-orders.'
+---
+
+All signal bot endpoints require authentication.
+
+## Method reference
+
+### Signal management
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `createSignal(params)` | POST | `/api/v5/tradingBot/signal/create-signal` | Create a new signal source |
+| `getSignals(params)` | GET | `/api/v5/tradingBot/signal/signals` | List signal sources |
+
+### Bot lifecycle
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `createSignalBot(params)` | POST | `/api/v5/tradingBot/signal/order-algo` | Deploy a signal bot |
+| `cancelSignalBots(params)` | POST | `/api/v5/tradingBot/signal/stop-order-algo` | Stop a signal bot |
+| `setSignalInstruments(params)` | POST | `/api/v5/tradingBot/signal/set-instruments` | Set tradable instruments for a bot |
+| `updateSignalMargin(params)` | POST | `/api/v5/tradingBot/signal/margin-balance` | Adjust a bot’s margin balance |
+| `updateSignalTPSL(params)` | POST | `/api/v5/tradingBot/signal/amendTPSL` | Update take-profit / stop-loss |
+
+### Bot queries
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getActiveSignalBot(params)` | GET | `/api/v5/tradingBot/signal/orders-algo-details` | Details of an active bot |
+| `getSignalBotOrder(params)` | GET | `/api/v5/tradingBot/signal/orders-algo-details` | Details of a specific bot order |
+| `getSignalBotHistory(params)` | GET | `/api/v5/tradingBot/signal/orders-algo-history` | Historical signal bots |
+| `getSignalBotPositions(params)` | GET | `/api/v5/tradingBot/signal/positions` | Open positions held by a bot |
+| `getSignalBotPositionHistory(params)` | GET | `/api/v5/tradingBot/signal/positions-history` | Historical bot positions |
+
+### Sub-orders
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `placeSignalBotSubOrder(params)` | POST | `/api/v5/tradingBot/signal/sub-order` | Manually place a sub-order on a bot |
+| `cancelSubOrder(params)` | POST | `/api/v5/tradingBot/signal/cancel-sub-order` | Cancel a bot sub-order |
+| `getSignalBotSubOrders(params)` | GET | `/api/v5/tradingBot/signal/sub-orders` | Sub-orders of a bot |
+| `getSignalBotEventHistory(params)` | GET | `/api/v5/tradingBot/signal/event-history` | Event history for a bot |
+| `closeSignalBotPosition(params)` | POST | `/api/v5/tradingBot/signal/close-position` | Close a bot position |
+
+## Examples
+
+### Create a signal source
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const [signal] = await client.createSignal({
+  signalChanName: 'My RSI Signal',
+  signalChanDesc: 'Fires when 4H RSI crosses 30 or 70',
+});
+
+console.log('Signal channel token:', signal.signalChanToken);
+console.log('Signal channel ID:', signal.signalChanId);
+```
+
+### Deploy a signal bot
+
+```typescript
+const [bot] = await client.createSignalBot({
+  signalChanId: 'your-signal-channel-id',
+  lever: '3',
+  instIds: ['BTC-USDT-SWAP', 'ETH-USDT-SWAP'],
+  investAmt: '500',
+  subOrdType: '1',    // '1' = market orders
+  includeAll: false,
+});
+
+console.log('Bot algo ID:', bot.algoId);
+```
+
+### View active bot and positions
+
+```typescript
+// Get active bot details
+const bots = await client.getActiveSignalBot({
+  algoOrdType: 'signal',
+  algoId: 'your-algo-id',
+});
+console.log('Bot state:', bots[0]?.state);
+
+// Get open positions
+const positions = await client.getSignalBotPositions({
+  algoOrdType: 'signal',
+  algoId: 'your-algo-id',
+});
+for (const pos of positions) {
+  console.log(`${pos.instId}: pos=${pos.pos}, uPnL=${pos.upl}`);
+}
+```
+
+### Update TP/SL
+
+```typescript
+await client.updateSignalTPSL({
+  algoId: 'your-algo-id',
+  tpRatio: '0.2',   // 20% take profit
+  slRatio: '0.1',   // 10% stop loss
+});
+```
+
+### Stop a bot
+
+```typescript
+const [stopped] = await client.cancelSignalBots({
+  algoId: 'your-algo-id',
+});
+console.log('Stopped bot:', stopped.algoId);
+```
+
+### View event history
+
+```typescript
+const events = await client.getSignalBotEventHistory({
+  algoId: 'your-algo-id',
+  limit: '20',
+});
+for (const event of events) {
+  console.log(`[${event.cTime}] ${event.eventType}: ${event.msg}`);
+}
+```

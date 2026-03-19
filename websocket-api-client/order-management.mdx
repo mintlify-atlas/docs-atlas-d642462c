@@ -1,0 +1,416 @@
+---
+title: "Order management"
+description: "Place, amend, cancel, and mass-cancel orders over a persistent WebSocket connection using typed async methods."
+---
+
+All order management methods on `WebsocketAPIClient` route through the **private** WebSocket channel and return a `Promise` that resolves when the server response arrives.
+
+## Response shape
+
+Every method returns a `WSAPIResponse<TData, TOperation>`:
+
+```typescript
+interface WSAPIResponse<
+  TResponseData extends object = object,
+  TOperation extends WSAPIOperation = WSAPIOperation,
+> {
+  wsKey: WsKey;          // Which WS connection handled the request
+  id: numberInString;    // Auto-generated request ID
+  op: TOperation;        // Operation name (e.g. 'order')
+  code: numberInString;  // '0' = success, anything else = error
+  msg: string;           // Human-readable message (empty on success)
+  data: TResponseData;   // Typed result array
+  inTime: numberInString;  // Server received timestamp (µs)
+  outTime: numberInString; // Server sent timestamp (µs)
+}
+```
+
+<Note>
+  A `code` other than `'0'` does **not** throw by default — check `res.code` and
+  the per-item `sCode` field inside `res.data` for operation-level errors.
+  Network or timeout errors will reject the promise.
+</Note>
+
+## submitNewOrder()
+
+Place a single order.
+
+```typescript
+submitNewOrder(
+  params: WSAPIPlaceOrderRequestV5,
+): Promise<WSAPIResponse<[OrderResult], 'order'>>
+```
+
+### Parameters
+
+<ParamField path="instId" type="string">
+  Instrument ID (e.g. `'BTC-USDT'`). Deprecated from March 2026 — prefer `instIdCode` for lower latency.
+</ParamField>
+
+<ParamField path="instIdCode" type="number">
+  Numeric instrument ID code. Takes precedence over `instId` when both are provided.
+  Use the Get instruments endpoint to map instrument names to codes.
+</ParamField>
+
+<ParamField path="tdMode" type="TradeMode" required>
+  Trading mode: `'cash'`, `'cross'`, or `'isolated'`.
+</ParamField>
+
+<ParamField path="side" type="OrderSide" required>
+  Order side: `'buy'` or `'sell'`.
+</ParamField>
+
+<ParamField path="ordType" type="OrderType" required>
+  Order type: `'market'`, `'limit'`, `'post_only'`, `'fok'`, `'ioc'`, etc.
+</ParamField>
+
+<ParamField path="sz" type="string" required>
+  Quantity to buy or sell, as a numeric string.
+</ParamField>
+
+<ParamField path="px" type="string">
+  Order price. Required for `limit`, `post_only`, `fok`, and `ioc` order types.
+</ParamField>
+
+<ParamField path="clOrdId" type="string">
+  Client-assigned order ID (up to 32 alphanumeric characters). Used to identify the order in subsequent operations.
+</ParamField>
+
+<ParamField path="posSide" type="PositionSide">
+  Position side in hedge mode: `'long'` or `'short'`.
+</ParamField>
+
+<ParamField path="reduceOnly" type="boolean">
+  Whether the order can only reduce the position size.
+</ParamField>
+
+<ParamField path="tgtCcy" type="'base_ccy' | 'quote_ccy'">
+  Currency unit for `sz` in spot orders. `'base_ccy'` means `sz` is in the base currency; `'quote_ccy'` means `sz` is in the quote currency.
+</ParamField>
+
+<ParamField path="stpMode" type="'cancel_maker' | 'cancel_taker' | 'cancel_both'">
+  Self-trade prevention mode.
+</ParamField>
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.submitNewOrder({
+    instId: 'BTC-USDT',
+    tdMode: 'cash',
+    side: 'buy',
+    ordType: 'limit',
+    sz: '0.01',
+    px: '50000',
+    clOrdId: 'my-order-001',
+  });
+
+  if (res.code === '0') {
+    const order = res.data[0];
+    console.log('Order placed. ordId:', order.ordId);
+  } else {
+    // Operation-level error
+    console.error('Order rejected:', res.data[0].sCode, res.data[0].sMsg);
+  }
+} catch (e) {
+  // Network or timeout error
+  console.error('Request failed:', e);
+}
+```
+
+---
+
+## submitMultipleOrders()
+
+Place multiple orders in a single batch request.
+
+```typescript
+submitMultipleOrders(
+  params: WSAPIPlaceOrderRequestV5[],
+): Promise<WSAPIResponse<OrderResult[], 'batch-orders'>>
+```
+
+Each element in the array is a `WSAPIPlaceOrderRequestV5` (same fields as `submitNewOrder`). The response `data` array has one entry per submitted order, each with its own `sCode`.
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.submitMultipleOrders([
+    {
+      instId: 'BTC-USDT',
+      tdMode: 'cash',
+      side: 'buy',
+      ordType: 'market',
+      sz: '100',
+    },
+    {
+      instId: 'ETH-USDT',
+      tdMode: 'cash',
+      side: 'sell',
+      ordType: 'limit',
+      sz: '1',
+      px: '3500',
+    },
+  ]);
+
+  for (const order of res.data) {
+    if (order.sCode === '0') {
+      console.log('Order accepted. ordId:', order.ordId);
+    } else {
+      console.error('Order rejected:', order.sCode, order.sMsg);
+    }
+  }
+} catch (e) {
+  console.error('Batch order request failed:', e);
+}
+```
+
+<Tip>
+  Batch requests count as a single WebSocket message. Use `submitMultipleOrders()`
+  rather than multiple `submitNewOrder()` calls to reduce round-trips.
+</Tip>
+
+---
+
+## cancelOrder()
+
+Cancel a single open order.
+
+```typescript
+cancelOrder(
+  params: OrderIdRequest,
+): Promise<WSAPIResponse<[WSAPICancelOrderResultV5], 'cancel-order'>>
+```
+
+`OrderIdRequest` requires `instId` and at least one of `ordId` or `clOrdId`.
+
+The response data contains:
+
+```typescript
+interface WSAPICancelOrderResultV5 {
+  clOrdId: string;          // Client order ID
+  ordId: string;            // Exchange order ID
+  ts: numberInString;       // Cancellation timestamp (ms)
+  sCode: string;            // '0' = success
+  sMsg: string;             // Error message if sCode !== '0'
+}
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.cancelOrder({
+    instId: 'BTC-USDT',
+    ordId: '2510789768709120',
+  });
+
+  const result = res.data[0];
+  if (result.sCode === '0') {
+    console.log('Order cancelled:', result.ordId);
+  } else {
+    console.error('Cancel failed:', result.sCode, result.sMsg);
+  }
+} catch (e) {
+  console.error('Cancel request failed:', e);
+}
+```
+
+---
+
+## cancelMultipleOrders()
+
+Cancel multiple open orders in one request.
+
+```typescript
+cancelMultipleOrders(
+  params: OrderIdRequest[],
+): Promise<WSAPIResponse<WSAPICancelOrderResultV5[], 'batch-cancel-orders'>>
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.cancelMultipleOrders([
+    { instId: 'BTC-USDT', ordId: '2510789768709120' },
+    { instId: 'ETH-USDT', ordId: '2510789768709121' },
+  ]);
+
+  for (const result of res.data) {
+    if (result.sCode === '0') {
+      console.log('Cancelled:', result.ordId);
+    } else {
+      console.error('Failed to cancel:', result.ordId, result.sMsg);
+    }
+  }
+} catch (e) {
+  console.error('Batch cancel request failed:', e);
+}
+```
+
+---
+
+## amendOrder()
+
+Amend the price or quantity of a single open order.
+
+```typescript
+amendOrder(
+  params: WSAPIAmendOrderRequestV5,
+): Promise<WSAPIResponse<[OrderResult], 'amend-order'>>
+```
+
+```typescript
+interface WSAPIAmendOrderRequestV5 {
+  instId?: string;       // Instrument ID (deprecated; prefer instIdCode)
+  instIdCode?: number;   // Instrument ID code
+  ordId?: string;        // Exchange order ID (ordId or clOrdId required)
+  clOrdId?: string;      // Client order ID
+  reqId?: string;        // Client-supplied request ID for tracking
+  newSz?: string;        // New quantity
+  newPx?: string;        // New price
+  newPxUsd?: string;     // New price in USD (options only)
+  newPxVol?: string;     // New price in implied vol (options only)
+  cxlOnFail?: boolean;   // Cancel the order if the amend fails
+}
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.amendOrder({
+    instId: 'BTC-USDT',
+    ordId: '2510789768709120',
+    newPx: '51000',
+    newSz: '0.02',
+  });
+
+  if (res.code === '0') {
+    console.log('Order amended:', res.data[0].ordId);
+  } else {
+    console.error('Amend rejected:', res.data[0].sCode, res.data[0].sMsg);
+  }
+} catch (e) {
+  console.error('Amend request failed:', e);
+}
+```
+
+---
+
+## amendMultipleOrders()
+
+Amend multiple open orders in a single request.
+
+```typescript
+amendMultipleOrders(
+  params: WSAPIAmendOrderRequestV5[],
+): Promise<WSAPIResponse<[OrderResult], 'batch-amend-orders'>>
+```
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.amendMultipleOrders([
+    {
+      instId: 'BTC-USDT',
+      ordId: '2510789768709120',
+      newPx: '51000',
+    },
+    {
+      instId: 'ETH-USDT',
+      clOrdId: 'my-eth-order',
+      newSz: '2',
+    },
+  ]);
+
+  console.log('Batch amend result:', res);
+} catch (e) {
+  console.error('Batch amend request failed:', e);
+}
+```
+
+---
+
+## massCancelOrders()
+
+Cancel all open orders for a given instrument type and family in one operation. Useful for risk management or when you need to flatten all positions quickly.
+
+```typescript
+massCancelOrders(
+  params: WSAPIMassCancelOrdersRequestV5,
+): Promise<WSAPIResponse<[{ result: boolean }], 'mass-cancel'>>
+```
+
+```typescript
+interface WSAPIMassCancelOrdersRequestV5 {
+  instType: string;      // Instrument type (e.g. 'FUTURES', 'SWAP', 'OPTION')
+  instFamily: string;    // Instrument family (e.g. 'BTC-USD')
+  lockInterval?: string; // Lock duration in ms before new orders are accepted
+}
+```
+
+The response `data[0].result` is `true` when the mass cancel was accepted.
+
+<Warning>
+  `massCancelOrders()` cancels **all** open orders matching the instrument type and family.
+  This cannot be undone. Use with caution in live trading.
+</Warning>
+
+### Example
+
+```typescript
+try {
+  const res = await wsClient.massCancelOrders({
+    instType: 'FUTURES',
+    instFamily: 'BTC-USD',
+  });
+
+  if (res.data[0].result) {
+    console.log('All BTC-USD futures orders cancelled.');
+  } else {
+    console.error('Mass cancel failed:', res.msg);
+  }
+} catch (e) {
+  console.error('Mass cancel request failed:', e);
+}
+```
+
+---
+
+## Promise-based error handling
+
+The promise returned by each method:
+
+- **Resolves** with a `WSAPIResponse` object when a response arrives from the server, regardless of whether the operation succeeded at the business logic level.
+- **Rejects** when the request cannot be delivered (e.g. the WebSocket connection drops before the response is received, or a timeout occurs).
+
+Always check both layers:
+
+```typescript
+try {
+  const res = await wsClient.submitNewOrder({ /* ... */ });
+
+  // Layer 1: top-level code — '0' means the request was processed
+  if (res.code !== '0') {
+    console.error('Request-level error:', res.msg);
+    return;
+  }
+
+  // Layer 2: per-item sCode — '0' means the individual order was accepted
+  const order = res.data[0];
+  if (order.sCode !== '0') {
+    console.error('Order-level error:', order.sCode, order.sMsg);
+    return;
+  }
+
+  console.log('Order placed successfully. ordId:', order.ordId);
+} catch (e) {
+  // Network / timeout error
+  console.error('Transport error:', e);
+}
+```

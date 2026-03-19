@@ -1,0 +1,142 @@
+---
+title: 'Block Trading'
+description: 'RFQ creation, quote management, block trade execution, and market data for OKX block trading (RFQ platform).'
+---
+
+Block trading uses the RFQ (Request for Quote) model. Makers respond to RFQs with quotes; takers execute against the best quote. Most endpoints require authentication; public trade data does not.
+
+## Method reference
+
+### Counterparty and settings
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getBlockCounterParties()` | GET | Yes | `/api/v5/rfq/counterparties` | Eligible block trading counterparties |
+| `getQuoteProducts()` | GET | Yes | `/api/v5/rfq/maker-instrument-settings` | Maker instrument settings |
+| `updateBlockQuoteProducts(params)` | POST | Yes | `/api/v5/rfq/maker-instrument-settings` | Update maker instrument settings |
+
+### RFQ lifecycle (taker)
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `createBlockRFQ(params)` | POST | Yes | `/api/v5/rfq/create-rfq` | Create a new RFQ |
+| `cancelBlockRFQ(params)` | POST | Yes | `/api/v5/rfq/cancel-rfq` | Cancel an RFQ |
+| `cancelMultipleBlockRFQs(params)` | POST | Yes | `/api/v5/rfq/cancel-batch-rfqs` | Cancel multiple RFQs |
+| `cancelAllRFQs()` | POST | Yes | `/api/v5/rfq/cancel-all-rfqs` | Cancel all active RFQs |
+| `executeBlockQuote(params)` | POST | Yes | `/api/v5/rfq/execute-quote` | Execute a quote |
+| `getBlockRFQs(params?)` | GET | Yes | `/api/v5/rfq/rfqs` | List RFQs |
+
+### Quote lifecycle (maker)
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `createBlockQuote(params)` | POST | Yes | `/api/v5/rfq/create-quote` | Create a quote in response to an RFQ |
+| `cancelBlockQuote(params)` | POST | Yes | `/api/v5/rfq/cancel-quote` | Cancel a quote |
+| `cancelMultipleBlockQuotes(params)` | POST | Yes | `/api/v5/rfq/cancel-batch-quotes` | Cancel multiple quotes |
+| `cancelAllBlockQuotes()` | POST | Yes | `/api/v5/rfq/cancel-all-quotes` | Cancel all active quotes |
+| `getBlockQuotes(params?)` | GET | Yes | `/api/v5/rfq/quotes` | List quotes |
+
+### MMP (Market Maker Protection)
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `updateBlockMmpConfig(params)` | POST | Yes | `/api/v5/rfq/mmp-config` | Configure MMP |
+| `getBlockMmpConfig()` | GET | Yes | `/api/v5/rfq/mmp-config` | Get MMP configuration |
+| `resetBlockMmp()` | POST | Yes | `/api/v5/rfq/mmp-reset` | Reset MMP after trigger |
+| `cancelAllBlockAfter(params)` | POST | Yes | `/api/v5/rfq/cancel-all-after` | Cancel-all-after timer |
+
+### Trades and market data
+
+| Method | HTTP | Auth | Endpoint | Description |
+|---|---|---|---|---|
+| `getBlockTrades(params?)` | GET | Yes | `/api/v5/rfq/trades` | Your executed block trades |
+| `getPublicRFQBlockTrades(params?)` | GET | No | `/api/v5/rfq/public-trades` | Public block trade tape |
+| `getBlockTickers(params)` | GET | No | `/api/v5/market/block-tickers` | Block tickers by instrument type |
+| `getBlockTicker(params)` | GET | No | `/api/v5/market/block-ticker` | Block ticker for one instrument |
+| `getBlockPublicTrades(params)` | GET | No | `/api/v5/public/block-trades` | Public block trades for an instrument |
+
+## Examples
+
+### Create an RFQ (taker)
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+// Get eligible counterparties first
+const counterparties = await client.getBlockCounterParties();
+console.log('Available counterparties:', counterparties.map((c) => c.traderCode));
+
+// Create an RFQ to buy 5 BTC
+const [rfq] = await client.createBlockRFQ({
+  counterparties: ['COUNTERPARTY_CODE'],
+  anonymous: false,
+  legs: [
+    {
+      instId: 'BTC-USDT',
+      tdMode: 'cash',
+      side: 'buy',
+      sz: '5',
+      tgtCcy: 'base_ccy',
+    },
+  ],
+});
+
+console.log('RFQ ID:', rfq.rfqId);
+console.log('State:', rfq.state);
+```
+
+### Create a quote (maker)
+
+```typescript
+const [quote] = await client.createBlockQuote({
+  rfqId: 'incoming-rfq-id',
+  quoteSide: 'buy',
+  legs: [
+    {
+      instId: 'BTC-USDT',
+      px: '67500',
+      sz: '5',
+      side: 'sell',
+      tgtCcy: 'base_ccy',
+    },
+  ],
+});
+console.log('Quote ID:', quote.quoteId);
+```
+
+### Execute a quote
+
+```typescript
+const [trade] = await client.executeBlockQuote({
+  rfqId: 'your-rfq-id',
+  quoteId: 'the-best-quote-id',
+  legs: [
+    {
+      instId: 'BTC-USDT',
+      px: '67500',
+      sz: '5',
+      side: 'buy',
+      tgtCcy: 'base_ccy',
+    },
+  ],
+});
+console.log('Block trade ID:', trade.blockTdId);
+console.log('Fill price:', trade.legs[0]?.px);
+```
+
+### Query public block trades
+
+```typescript
+const client = new RestClient(); // no auth
+
+const trades = await client.getPublicRFQBlockTrades();
+for (const t of trades.slice(0, 5)) {
+  console.log(`${t.instId}: ${t.sz} @ ${t.px} (${t.side})`);
+}
+```

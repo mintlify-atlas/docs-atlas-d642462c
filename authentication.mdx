@@ -1,0 +1,225 @@
+---
+title: Authentication
+description: How to create OKX API keys and configure credentials in the SDK.
+---
+
+## Create API keys
+
+<Steps>
+  <Step title="Generate your API key on OKX">
+    Visit [OKX API Management](https://www.okx.com/account/my-api) and create a new API key. OKX will generate three values that you need:
+
+    | Credential | Description |
+    |---|---|
+    | `apiKey` | Public identifier for your key |
+    | `apiSecret` | Secret used to sign requests — treat this like a password |
+    | `apiPass` | Passphrase you chose when creating the key |
+
+    <Warning>
+      Your `apiSecret` is only shown once at creation time. Store it securely immediately.
+    </Warning>
+  </Step>
+
+  <Step title="Store credentials in environment variables">
+    Never hardcode credentials in source code. Use environment variables instead:
+
+    ```bash
+    export API_KEY_COM='your-api-key'
+    export API_SECRET_COM='your-api-secret'
+    export API_PASSPHRASE_COM='your-api-passphrase'
+    ```
+
+    Or pass them inline when running a script:
+
+    ```bash
+    API_KEY_COM='your-api-key' API_SECRET_COM='your-api-secret' API_PASSPHRASE_COM='your-passphrase' ts-node my-script.ts
+    ```
+
+    <Note>
+      Use single quotes in the shell to prevent special characters like `$` from being incorrectly interpolated.
+    </Note>
+  </Step>
+
+  <Step title="Pass credentials to the client">
+    Supply the three credential fields when constructing `RestClient` or `WebsocketClient`.
+
+    <CodeGroup>
+      ```typescript RestClient
+      import { RestClient } from 'okx-api';
+
+      const client = new RestClient({
+        apiKey: process.env.API_KEY_COM,
+        apiSecret: process.env.API_SECRET_COM,
+        apiPass: process.env.API_PASS_COM,
+      });
+      ```
+
+      ```typescript WebsocketClient
+      import { WebsocketClient } from 'okx-api';
+
+      const wsClient = new WebsocketClient({
+        accounts: [
+          {
+            apiKey: process.env.API_KEY_COM,
+            apiSecret: process.env.API_SECRET_COM,
+            apiPass: process.env.API_PASSPHRASE_COM,
+          },
+        ],
+      });
+      ```
+    </CodeGroup>
+
+    <Note>
+      `WebsocketClient` accepts an `accounts` array, which allows you to authenticate up to 100 accounts on a single private connection — matching OKX's own limit.
+    </Note>
+  </Step>
+</Steps>
+
+## Region selection
+
+OKX operates three separate regional platforms, each with its own domain and API endpoint. API keys are created per platform and are not interchangeable between regions.
+
+| Region | Domain | `market` value |
+|---|---|---|
+| OKX Global (default) | `www.okx.com` | `'GLOBAL'` or omit |
+| OKX EEA | `my.okx.com` | `'EEA'` |
+| OKX US | `app.okx.com` | `'US'` |
+
+Set the `market` option on either client to connect to the correct regional endpoint:
+
+<CodeGroup>
+  ```typescript RestClient — EEA
+  import { RestClient } from 'okx-api';
+
+  const client = new RestClient({
+    apiKey: process.env.API_KEY_EEA,
+    apiSecret: process.env.API_SECRET_EEA,
+    apiPass: process.env.API_PASS_EEA,
+    market: 'EEA', // connects to my.okx.com
+  });
+  ```
+
+  ```typescript RestClient — US
+  import { RestClient } from 'okx-api';
+
+  const client = new RestClient({
+    apiKey: process.env.API_KEY_US,
+    apiSecret: process.env.API_SECRET_US,
+    apiPass: process.env.API_PASS_US,
+    market: 'US', // connects to app.okx.com
+  });
+  ```
+
+  ```typescript WebsocketClient — EEA
+  import { WebsocketClient } from 'okx-api';
+
+  const wsClient = new WebsocketClient({
+    market: 'EEA',
+    accounts: [
+      {
+        apiKey: process.env.API_KEY_EEA,
+        apiSecret: process.env.API_SECRET_EEA,
+        apiPass: process.env.API_PASSPHRASE_EEA,
+      },
+    ],
+  });
+  ```
+</CodeGroup>
+
+<Note>
+  Global is the default. If you are on `www.okx.com`, you do not need to set `market` at all.
+</Note>
+
+## Demo trading mode
+
+OKX provides a paper trading environment ("demo trading") that uses separate demo keys but does not require real funds. This is the recommended way to test your integration before going live.
+
+Enable it by setting `demoTrading: true` on either client. Use your demo API keys — not your live keys.
+
+<CodeGroup>
+  ```typescript RestClient
+  import { RestClient } from 'okx-api';
+
+  const client = new RestClient({
+    apiKey: process.env.API_KEY_COM,     // demo API key
+    apiSecret: process.env.API_SECRET_COM,
+    apiPass: process.env.API_PASS_COM,
+    demoTrading: true,
+  });
+
+  (async () => {
+    const balance = await client.getBalance({ ccy: 'USDT' });
+    console.log('Demo USDT balance:', JSON.stringify(balance, null, 2));
+
+    const buyResult = await client.submitOrder({
+      instId: 'BTC-USDT',
+      ordType: 'market',
+      side: 'buy',
+      sz: '0.002',
+      tdMode: 'cash',
+      tgtCcy: 'base_ccy',
+    });
+    console.log('Demo buy result:', buyResult);
+  })();
+  ```
+
+  ```typescript WebsocketClient
+  import { WebsocketClient } from 'okx-api';
+
+  const wsClient = new WebsocketClient({
+    demoTrading: true,
+    accounts: [
+      {
+        apiKey: process.env.API_KEY_COM,
+        apiSecret: process.env.API_SECRET_COM,
+        apiPass: process.env.API_PASS_COM,
+      },
+    ],
+  });
+
+  wsClient.subscribe([
+    { channel: 'account' },
+    { channel: 'positions', instType: 'ANY' },
+  ]);
+  ```
+</CodeGroup>
+
+## Client options reference
+
+The `RestClientOptions` interface (from `src/types/rest/client.ts`) and `WSClientConfigurableOptions` interface (from `src/types/websockets/ws-general.ts`) accept the following credential and authentication options:
+
+### RestClientOptions
+
+| Option | Type | Description |
+|---|---|---|
+| `apiKey` | `string` | Your OKX API key |
+| `apiSecret` | `string` | Your OKX API secret |
+| `apiPass` | `string` | Your OKX API passphrase |
+| `market` | `'GLOBAL' \| 'EEA' \| 'US' \| 'prod'` | Regional endpoint to connect to. Defaults to `'GLOBAL'` (`www.okx.com`) |
+| `demoTrading` | `boolean` | Set to `true` to use OKX's demo trading environment |
+| `baseUrl` | `string` | Override the API base URL entirely (advanced use) |
+| `keepAlive` | `boolean` | Enable HTTP KeepAlive for REST requests |
+| `strict_param_validation` | `boolean` | Throw errors on undefined parameters when `true` |
+
+### WSClientConfigurableOptions
+
+| Option | Type | Description |
+|---|---|---|
+| `accounts` | `APICredentials[]` | One or more `{ apiKey, apiSecret, apiPass }` objects for private channel authentication |
+| `market` | `'GLOBAL' \| 'EEA' \| 'US' \| 'prod'` | Regional endpoint to connect to |
+| `demoTrading` | `boolean` | Set to `true` to use OKX's demo trading environment |
+| `pingInterval` | `number` | How often (ms) to check if the connection is alive |
+| `pongTimeout` | `number` | How long (ms) to wait for a heartbeat reply before treating the connection as dead |
+| `reconnectTimeout` | `number` | Delay (ms) before respawning a dropped connection |
+
+## Security best practices
+
+<Warning>
+  Hardcoding credentials in source code is a serious security risk. Even in private repositories, credentials can be leaked through git history, CI logs, or accidental shares.
+</Warning>
+
+- **Use environment variables** — load credentials with `process.env` and never commit them to version control.
+- **Restrict API key permissions** — create read-only keys for market data, and only grant trade/withdrawal permissions to keys that require them.
+- **Rotate keys regularly** — if a key is compromised, revoke it immediately from the [OKX API Management](https://www.okx.com/account/my-api) page.
+- **Use IP allowlisting** — OKX lets you bind an API key to specific IP addresses, limiting exposure if a key is leaked.
+- **Separate demo and live keys** — keep demo trading keys distinct from production keys to avoid accidentally trading on a live account.

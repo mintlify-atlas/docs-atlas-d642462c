@@ -1,0 +1,179 @@
+---
+title: 'Account'
+description: 'Methods for managing your OKX trading account: balances, positions, leverage, fees, and bills.'
+---
+
+All account methods require authentication. Pass your `apiKey`, `apiSecret`, and `apiPass` when constructing the client.
+
+## Method reference
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getAccountInstruments(params)` | GET | `/api/v5/account/instruments` | Instruments available in your account |
+| `getBalance(params?)` | GET | `/api/v5/account/balance` | Unified account balance |
+| `getPositions(params?)` | GET | `/api/v5/account/positions` | Open positions |
+| `getPositionsHistory(params?)` | GET | `/api/v5/account/positions-history` | Historical positions |
+| `getAccountPositionRisk(params?)` | GET | `/api/v5/account/account-position-risk` | Position risk snapshot |
+| `getBills(params?)` | GET | `/api/v5/account/bills` | Bills for last 7 days |
+| `getBillsArchive(params?)` | GET | `/api/v5/account/bills-archive` | Bills for last 3 months |
+| `getAccountConfiguration()` | GET | `/api/v5/account/config` | Account-level configuration |
+| `setLeverage(params)` | POST | `/api/v5/account/set-leverage` | Set leverage for instrument or currency |
+| `getLeverage(params)` | GET | `/api/v5/account/leverage-info` | Current leverage settings |
+| `getMaxBuySellAmount(params)` | GET | `/api/v5/account/max-size` | Max buy/sell quantity |
+| `getMaxAvailableTradableAmount(params)` | GET | `/api/v5/account/max-avail-size` | Max tradable amount |
+| `getFeeRates(params)` | GET | `/api/v5/account/trade-fee` | Trading fee tiers |
+| `getAccountRiskState()` | GET | `/api/v5/account/risk-state` | Account-level risk state |
+| `getGreeks(params?)` | GET | `/api/v5/account/greeks` | Portfolio greeks |
+| `getInterestAccrued(params?)` | GET | `/api/v5/account/interest-accrued` | Accrued interest |
+| `getInterestRate(params?)` | GET | `/api/v5/account/interest-rate` | Interest rates |
+| `getMaxWithdrawals(params?)` | GET | `/api/v5/account/max-withdrawal` | Max withdrawable amount |
+| `changePositionMargin(params)` | POST | `/api/v5/account/position/margin-balance` | Add or reduce isolated margin |
+| `setPositionMode(params)` | POST | `/api/v5/account/set-position-mode` | Switch between net and long/short mode |
+| `setAccountMode(params)` | POST | `/api/v5/account/set-account-level` | Set account level (simple, single, multi) |
+| `setAutoLoan(params)` | POST | `/api/v5/account/set-auto-loan` | Enable or disable auto loan |
+| `positionBuilder(params)` | POST | `/api/v5/account/position-builder` | Simulate portfolio margin scenarios |
+
+## Examples
+
+### Get account balance
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const balances = await client.getBalance();
+const usdtDetail = balances[0].details.find((d) => d.ccy === 'USDT');
+console.log('USDT available:', usdtDetail?.availBal);
+console.log('Total equity:', balances[0].totalEq);
+```
+
+### Get open positions
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+// All open positions
+const positions = await client.getPositions();
+
+// Filter to SWAP positions only
+const swapPositions = await client.getPositions({ instType: 'SWAP' });
+for (const pos of swapPositions) {
+  console.log(`${pos.instId}: size=${pos.pos}, PnL=${pos.unrealizedPnl}`);
+}
+```
+
+### Set leverage
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const result = await client.setLeverage({
+  instId: 'BTC-USDT-SWAP',
+  lever: '10',
+  mgnMode: 'cross',
+});
+console.log('New leverage:', result[0].lever);
+```
+
+### Get fee rates
+
+```typescript
+const fees = await client.getFeeRates({
+  instType: 'SPOT',
+});
+console.log('Maker fee:', fees[0].maker);
+console.log('Taker fee:', fees[0].taker);
+```
+
+### Query bills
+
+```typescript
+// Last 7 days
+const recentBills = await client.getBills({ ccy: 'USDT' });
+
+// Last 3 months
+const archiveBills = await client.getBillsArchive({ ccy: 'USDT' });
+
+for (const bill of recentBills) {
+  console.log(`${bill.type}: ${bill.balChg} ${bill.ccy} at ${bill.ts}`);
+}
+```
+
+### Request historical bill download
+
+```typescript
+// Request a download link for Q1 2024 bills
+const request = await client.requestBillsHistoryDownloadLink({
+  year: '2024',
+  quarter: 'Q1',
+});
+
+// Later, retrieve the generated link (may take up to 30–48 hours)
+const link = await client.getRequestedBillsHistoryLink({
+  year: '2024',
+  quarter: 'Q1',
+});
+console.log('Download URL:', link[0]);
+```
+
+## Key parameter types
+
+<AccordionGroup>
+  <Accordion title="SetLeverageRequest">
+
+  ```typescript
+  interface SetLeverageRequest {
+    instId?: string;       // Instrument ID (e.g. 'BTC-USDT-SWAP')
+    ccy?: string;          // Currency for cross margin (e.g. 'BTC')
+    lever: string;         // Leverage multiplier as a string (e.g. '10')
+    mgnMode: 'cross' | 'isolated';
+    posSide?: 'long' | 'short'; // Required in long/short position mode
+  }
+  ```
+
+  </Accordion>
+  <Accordion title="GetPositionsParams">
+
+  ```typescript
+  interface GetPositionsParams {
+    instType?: 'SPOT' | 'MARGIN' | 'SWAP' | 'FUTURES' | 'OPTION';
+    instId?: string;  // Filter by instrument
+    posId?: string;   // Filter by position ID
+  }
+  ```
+
+  </Accordion>
+  <Accordion title="GetHistoricPositionParams">
+
+  ```typescript
+  interface GetHistoricPositionParams {
+    instType?: 'MARGIN' | 'SWAP' | 'FUTURES' | 'OPTION';
+    instId?: string;
+    mgnMode?: string;
+    type?: string;
+    posId?: string;
+    after?: string;  // Unix ms timestamp — records older than this
+    before?: string; // Unix ms timestamp — records newer than this
+    limit?: string;  // Max 100, default 100
+  }
+  ```
+
+  </Accordion>
+</AccordionGroup>

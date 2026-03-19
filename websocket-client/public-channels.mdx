@@ -1,0 +1,303 @@
+---
+title: Public Channels
+description: Subscribe to real-time market data — instruments, tickers, order books, trades, and candles — without API credentials.
+---
+
+Public channels stream market data and require no authentication. The `WebsocketClient` automatically routes public subscriptions to the correct public WebSocket endpoint for your chosen market.
+
+## Setup
+
+```typescript
+import { DefaultLogger, WebsocketClient } from 'okx-api';
+
+const logger = {
+  ...DefaultLogger,
+  // trace: (...params) => console.log('trace', ...params),
+};
+
+const wsClient = new WebsocketClient(
+  {
+    // market defaults to 'prod' (www.okx.com)
+    // For EEA: market: 'EEA'
+    // For US:  market: 'US'
+  },
+  logger,
+);
+
+// All incoming channel data arrives on 'update'
+wsClient.on('update', (data) => {
+  console.log(new Date(), 'ws update', JSON.stringify(data));
+});
+
+wsClient.on('open', (data) => {
+  console.log('ws connection opened:', data.wsKey);
+});
+
+wsClient.on('response', (data) => {
+  console.log('ws response:', JSON.stringify(data, null, 2));
+});
+
+wsClient.on('reconnect', ({ wsKey }) => {
+  console.log('ws automatically reconnecting....', wsKey);
+});
+
+wsClient.on('reconnected', (data) => {
+  console.log('ws has reconnected', data?.wsKey);
+});
+
+wsClient.on('exception', (data) => {
+  console.error('ws exception:', data);
+});
+```
+
+## Channels
+
+### Instruments
+
+Streams instrument definitions for a given instrument type. Emits a snapshot on subscribe, then updates when instruments change.
+
+```typescript
+wsClient.subscribe({
+  channel: 'instruments',
+  instType: 'SPOT',
+});
+
+wsClient.subscribe({
+  channel: 'instruments',
+  instType: 'FUTURES',
+});
+```
+
+`instType` accepts: `'SPOT'`, `'MARGIN'`, `'SWAP'`, `'FUTURES'`, `'OPTION'`, `'ANY'`.
+
+### Tickers
+
+Streams best bid/ask and last trade price for a single instrument.
+
+```typescript
+wsClient.subscribe({
+  channel: 'tickers',
+  instId: 'BTC-USDT',
+});
+```
+
+### Trades
+
+Streams individual trade executions as they occur.
+
+```typescript
+wsClient.subscribe({
+  channel: 'trades',
+  instId: 'BTC-USDT',
+});
+```
+
+### Order Books
+
+Multiple depth variants are available.
+
+<CodeGroup>
+
+```typescript Full depth (400 levels)
+wsClient.subscribe({
+  channel: 'books',
+  instId: 'BTC-USDT',
+});
+```
+
+```typescript Top 5 levels
+wsClient.subscribe({
+  channel: 'books5',
+  instId: 'BTC-USDT',
+});
+```
+
+```typescript Best bid/offer tick-by-tick
+wsClient.subscribe({
+  channel: 'bbo-tbt',
+  instId: 'BTC-USDT',
+});
+```
+
+```typescript L2 tick-by-tick (400 levels)
+wsClient.subscribe({
+  channel: 'books-l2-tbt',
+  instId: 'BTC-USDT',
+});
+```
+
+</CodeGroup>
+
+### Candlesticks
+
+A wide range of timeframes is supported on the `candle*` family of channels. These route through the business WebSocket endpoint.
+
+<CodeGroup>
+
+```typescript 1-minute candles
+wsClient.subscribe({
+  channel: 'candle1m',
+  instId: 'BTC-USDT',
+});
+```
+
+```typescript 1-hour candles
+wsClient.subscribe({
+  channel: 'candle1H',
+  instId: 'BTC-USDT',
+});
+```
+
+```typescript 1-day candles
+wsClient.subscribe({
+  channel: 'candle1D',
+  instId: 'BTC-USDT',
+});
+```
+
+</CodeGroup>
+
+Available timeframes include: `candle1s`, `candle1m`, `candle3m`, `candle5m`, `candle15m`, `candle30m`, `candle1H`, `candle2H`, `candle4H`, `candle6H`, `candle12H`, `candle1D`, `candle2D`, `candle3D`, `candle5D`, `candle1W`, `candle1M`, `candle3M`, `candle6M`, `candle1Y` (plus UTC-aligned variants).
+
+### Mark Price
+
+```typescript
+wsClient.subscribe({
+  channel: 'mark-price',
+  instId: 'BTC-USDT',
+});
+
+// Mark price candlesticks
+wsClient.subscribe({
+  channel: 'mark-price-candle1m',
+  instId: 'BTC-USDT',
+});
+```
+
+### Index Tickers and Candles
+
+```typescript
+wsClient.subscribe({
+  channel: 'index-tickers',
+  instId: 'BTC-USDT',
+});
+
+wsClient.subscribe({
+  channel: 'index-candle1m',
+  instId: 'BTC-USD',
+});
+```
+
+### Funding Rate
+
+```typescript
+wsClient.subscribe({
+  channel: 'funding-rate',
+  instId: 'BTC-USD-SWAP',
+});
+```
+
+### Open Interest
+
+```typescript
+wsClient.subscribe({
+  channel: 'open-interest',
+  instId: 'BTC-USD-SWAP',
+});
+```
+
+### Price Limit
+
+```typescript
+wsClient.subscribe({
+  channel: 'price-limit',
+  instId: 'BTC-USDT-SWAP',
+});
+```
+
+### Option Summary
+
+```typescript
+wsClient.subscribe({
+  channel: 'opt-summary',
+  instFamily: 'BTC-USD',
+});
+```
+
+### Estimated Delivery / Exercise Price
+
+```typescript
+wsClient.subscribe({
+  channel: 'estimated-price',
+  instType: 'FUTURES',
+  instFamily: 'BTC-USD',
+});
+```
+
+### Liquidation Orders
+
+```typescript
+wsClient.subscribe({
+  channel: 'liquidation-orders',
+  instType: 'FUTURES',
+});
+
+wsClient.subscribe({
+  channel: 'liquidation-orders',
+  instType: 'SWAP',
+});
+```
+
+### Platform Status
+
+```typescript
+wsClient.subscribe({
+  channel: 'status',
+});
+```
+
+## Handling update events
+
+All channel data arrives on the `update` event. The payload includes the `arg` that was used to subscribe and the `data` array with the update, plus a `wsKey` identifying the connection.
+
+```typescript
+wsClient.on('update', (data) => {
+  // data.arg.channel identifies which channel sent the update
+  // data.data contains the array of updated records
+  // data.wsKey identifies the underlying connection
+  switch (data.arg.channel) {
+    case 'tickers':
+      console.log('Ticker update:', data.data);
+      break;
+    case 'trades':
+      console.log('Trade update:', data.data);
+      break;
+    case 'books':
+      console.log('Order book update:', data.data);
+      break;
+    default:
+      console.log(`Update from ${data.arg.channel}:`, data.data);
+  }
+});
+```
+
+## Subscribing to multiple channels at once
+
+Pass an array to `subscribe()` to batch multiple subscriptions into a single request.
+
+```typescript
+wsClient.subscribe([
+  {
+    channel: 'instruments',
+    instType: 'SPOT',
+  },
+  {
+    channel: 'tickers',
+    instId: 'LTC-BTC',
+  },
+]);
+```
+
+<Tip>
+The client automatically determines whether a channel belongs to the public or business endpoint and routes the subscription accordingly. You do not need to manage connection types manually.
+</Tip>

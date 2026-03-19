@@ -1,0 +1,144 @@
+---
+title: WebSocket Client
+description: Real-time market data and private account events via OKX WebSocket channels.
+---
+
+The `WebsocketClient` class provides an event-driven interface for subscribing to OKX WebSocket channels. It handles connection management, authentication, heartbeats, and automatic reconnection so you can focus on processing incoming data.
+
+## Installation
+
+```bash
+npm install okx-api
+```
+
+## Basic usage
+
+```typescript
+import { WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient({
+  // market defaults to 'prod' (www.okx.com)
+  // Add accounts array for private channels
+});
+
+// Listen for incoming channel data
+wsClient.on('update', (data) => {
+  console.log('received:', JSON.stringify(data));
+});
+
+// Subscribe to a public channel
+wsClient.subscribe({
+  channel: 'tickers',
+  instId: 'BTC-USDT',
+});
+```
+
+## Constructor options
+
+Pass a `WSClientConfigurableOptions` object as the first argument to the constructor.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `accounts` | `APICredentials[]` | — | One or more API credentials. Required for private channels. |
+| `market` | `'prod' \| 'EEA' \| 'US'` | `'prod'` | Selects the regional endpoint. `'prod'` connects to `www.okx.com`, `'EEA'` to `my.okx.com`, and `'US'` to `app.okx.com`. |
+| `demoTrading` | `boolean` | `false` | Use OKX demo trading endpoints. |
+| `pingInterval` | `number` | — | Milliseconds between heartbeat pings. |
+| `pongTimeout` | `number` | — | Milliseconds to wait for a pong before treating the connection as dead. |
+| `reconnectTimeout` | `number` | — | Milliseconds to wait before respawning a dropped connection. |
+| `disableHeartbeat` | `boolean` | `false` | Disable the ping/pong heartbeat. Not recommended. |
+| `customSignMessageFn` | `(message: string, secret: string) => Promise<string>` | — | Override the default HMAC signing implementation, e.g. to use Node's `createHmac`. |
+| `wsOptions` | `object` | — | Raw options forwarded to the underlying `WebSocket` constructor (agent, protocols, etc.). |
+| `wsUrl` | `string` | — | Override the WebSocket URL entirely. |
+
+```typescript
+import { DefaultLogger, WebsocketClient } from 'okx-api';
+
+const wsClient = new WebsocketClient(
+  {
+    market: 'prod',
+    demoTrading: false,
+    pingInterval: 10000,
+    pongTimeout: 5000,
+    reconnectTimeout: 2500,
+    accounts: [
+      {
+        apiKey: process.env.API_KEY!,
+        apiSecret: process.env.API_SECRET!,
+        apiPass: process.env.API_PASSPHRASE!,
+      },
+    ],
+  },
+  DefaultLogger, // optional custom logger
+);
+```
+
+## Subscribe and unsubscribe
+
+Call `subscribe()` with a single channel arg object or an array of them. The client automatically opens the appropriate WebSocket connection if one does not exist yet, and resubscribes after any reconnection.
+
+```typescript
+// Single subscription
+wsClient.subscribe({
+  channel: 'tickers',
+  instId: 'BTC-USDT',
+});
+
+// Multiple subscriptions in one call
+wsClient.subscribe([
+  { channel: 'tickers', instId: 'BTC-USDT' },
+  { channel: 'trades', instId: 'ETH-USDT' },
+]);
+
+// Unsubscribe
+wsClient.unsubscribe({
+  channel: 'tickers',
+  instId: 'BTC-USDT',
+});
+```
+
+<Note>
+Topics are persisted in memory. If the connection drops and reconnects, all active subscriptions are automatically resubscribed. Calling `unsubscribe()` removes a topic from that list so it is not resubscribed.
+</Note>
+
+## Event-driven architecture
+
+All incoming data and lifecycle events are surfaced through Node.js `EventEmitter` events. Attach listeners with `.on()` before subscribing.
+
+```typescript
+wsClient.on('update', (data) => { /* channel data */ });
+wsClient.on('response', (data) => { /* subscribe/auth confirmations */ });
+wsClient.on('open', (data) => { /* connection opened */ });
+wsClient.on('reconnect', (data) => { /* reconnecting */ });
+wsClient.on('reconnected', (data) => { /* reconnection succeeded */ });
+wsClient.on('exception', (data) => { /* errors */ });
+```
+
+## Connections
+
+The client manages separate WebSocket connections per endpoint type (public, private, business). You can eagerly open connections before subscribing, or let the library open them on demand.
+
+```typescript
+// Open all connections upfront
+wsClient.connectAll();
+
+// Or open specific connections
+wsClient.connectPublic();
+wsClient.connectPrivate();
+```
+
+## Learn more
+
+<CardGroup cols={2}>
+  <Card title="Public Channels" href="/websocket-client/public-channels">
+    Subscribe to instruments, tickers, order books, trades, and candles without authentication.
+  </Card>
+  <Card title="Private Channels" href="/websocket-client/private-channels">
+    Subscribe to account, positions, orders, and fills with API credentials.
+  </Card>
+  <Card title="Event Handling" href="/websocket-client/events-handling">
+    Full reference for all emitted events and their TypeScript types.
+  </Card>
+  <Card title="Reconnection" href="/websocket-client/reconnection">
+    How the client detects dropped connections and restores subscriptions automatically.
+  </Card>
+</CardGroup>

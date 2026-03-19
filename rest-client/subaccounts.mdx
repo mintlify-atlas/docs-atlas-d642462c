@@ -1,0 +1,131 @@
+---
+title: 'Sub-accounts'
+description: 'List sub-accounts, view their balances, transfer funds between accounts, and manage API key permissions.'
+---
+
+All sub-account methods require authentication with the master account credentials.
+
+## Method reference
+
+| Method | HTTP | Endpoint | Description |
+|---|---|---|---|
+| `getSubAccountList(params?)` | GET | `/api/v5/users/subaccount/list` | List all sub-accounts |
+| `getSubAccountBalances(params)` | GET | `/api/v5/account/subaccount/balances` | Trading account balance of a sub-account |
+| `getSubAccountFundingBalances(params)` | GET | `/api/v5/asset/subaccount/balances` | Funding account balance of a sub-account |
+| `getSubAccountMaxWithdrawal(params)` | GET | `/api/v5/account/subaccount/max-withdrawal` | Max withdrawal for a sub-account |
+| `transferSubAccountBalance(params)` | POST | `/api/v5/asset/subaccount/transfer` | Transfer between master and sub-account |
+| `resetSubAccountAPIKey(params)` | POST | `/api/v5/users/subaccount/modify-apikey` | Reset a sub-account API key permissions |
+| `getSubAccountTransferHistory(params?)` | GET | `/api/v5/asset/subaccount/bills` | Transfer history for a sub-account |
+| `getManagedSubAccountTransferHistory(params)` | GET | `/api/v5/asset/subaccount/managed-subaccount-bills` | Managed sub-account transfer bills |
+| `setSubAccountTransferOutPermission(params)` | POST | `/api/v5/users/subaccount/set-transfer-out` | Allow or block transfer-out by sub-account |
+| `setSubAccountLoanAllocation(params)` | POST | `/api/v5/account/subaccount/set-loan-allocation` | Allocate loan quota to sub-accounts |
+| `getSubAccountBorrowInterestAndLimit(params)` | GET | `/api/v5/account/subaccount/interest-limits` | Borrow interest and limit for a sub-account |
+| `getSubAccountCustodyTradingList(params?)` | GET | `/api/v5/users/entrust-subaccount-list` | Sub-accounts under custody trading |
+
+## Examples
+
+### List sub-accounts
+
+```typescript
+import { RestClient } from 'okx-api';
+
+const client = new RestClient({
+  apiKey: process.env.API_KEY!,
+  apiSecret: process.env.API_SECRET!,
+  apiPass: process.env.API_PASS!,
+});
+
+const subAccounts = await client.getSubAccountList();
+for (const account of subAccounts) {
+  console.log(`Name: ${account.subAcct}, Enabled: ${account.enable}`);
+}
+```
+
+### Get sub-account trading balance
+
+```typescript
+const [balances] = await client.getSubAccountBalances({
+  subAcct: 'my-trading-sub',
+});
+
+console.log('Total equity:', balances.totalEq);
+const usdt = balances.details.find((d) => d.ccy === 'USDT');
+console.log('USDT available:', usdt?.availBal);
+```
+
+### Get sub-account funding balance
+
+```typescript
+const fundingBalances = await client.getSubAccountFundingBalances({
+  subAcct: 'my-trading-sub',
+  ccy: 'USDT',
+});
+
+for (const b of fundingBalances) {
+  console.log(`${b.ccy}: ${b.availBal} available`);
+}
+```
+
+### Transfer funds between master and sub-account
+
+```typescript
+// Master to sub-account (funding accounts)
+const result = await client.transferSubAccountBalance({
+  ccy: 'USDT',
+  amt: '500',
+  from: '6',       // '6' = funding account
+  to: '6',
+  fromSubAccount: '',              // empty = master account
+  toSubAccount: 'my-trading-sub', // destination sub-account
+  type: '1',                       // '1' = master to sub
+});
+console.log('Transfer ID:', result[0].transId);
+
+// Sub-account back to master
+const toMaster = await client.transferSubAccountBalance({
+  ccy: 'USDT',
+  amt: '200',
+  from: '6',
+  to: '6',
+  fromSubAccount: 'my-trading-sub',
+  toSubAccount: '',
+  type: '2',  // '2' = sub to master
+});
+```
+
+### Reset sub-account API key
+
+```typescript
+const result = await client.resetSubAccountAPIKey({
+  subAcct: 'my-trading-sub',
+  apiKey: 'the-subaccount-api-key',
+  label: 'Updated label',
+  perm: 'read_only',   // 'read_only', 'trade', 'withdraw'
+  ip: '192.168.1.1',   // IP whitelist (optional)
+});
+console.log('API key updated:', result[0].apiKey);
+```
+
+### Set transfer-out permission
+
+```typescript
+// Prevent the sub-account from initiating outbound transfers
+await client.setSubAccountTransferOutPermission({
+  subAcct: 'my-trading-sub',
+  canTransOut: false,
+});
+```
+
+### View transfer history
+
+```typescript
+const history = await client.getSubAccountTransferHistory({
+  subAcct: 'my-trading-sub',
+  ccy: 'USDT',
+  limit: '20',
+});
+
+for (const transfer of history) {
+  console.log(`${transfer.type}: ${transfer.amt} ${transfer.ccy} at ${transfer.ts}`);
+}
+```
