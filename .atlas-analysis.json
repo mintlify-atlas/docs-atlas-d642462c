@@ -1,0 +1,123 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "OKX API (Node.js SDK)",
+  "projectDescription": "A complete Node.js/TypeScript SDK for the OKX exchange REST APIs and WebSockets, with full type support, automatic reconnection, and browser compatibility.",
+  "theme": "sequoia",
+  "primaryColor": "#cb0404",
+  "lightColor": "#f3d2d2",
+  "darkColor": "#e37b84",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "REST Client",
+            "pages": [
+              "rest-client/overview",
+              "rest-client/account",
+              "rest-client/trading",
+              "rest-client/funding",
+              "rest-client/market-data",
+              "rest-client/subaccounts",
+              "rest-client/earn-finance",
+              "rest-client/copy-trading",
+              "rest-client/grid-trading",
+              "rest-client/signal-bots",
+              "rest-client/block-trading",
+              "rest-client/spread-trading",
+              "rest-client/recurring-buy"
+            ]
+          },
+          {
+            "group": "WebSocket Client",
+            "pages": [
+              "websocket-client/overview",
+              "websocket-client/public-channels",
+              "websocket-client/private-channels",
+              "websocket-client/events-handling",
+              "websocket-client/reconnection"
+            ]
+          },
+          {
+            "group": "WebSocket API Client",
+            "pages": [
+              "websocket-api-client/overview",
+              "websocket-api-client/order-management",
+              "websocket-api-client/spread-orders"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/regions",
+              "guides/error-handling",
+              "guides/browser-usage",
+              "guides/typescript",
+              "guides/llm-ai-usage"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Classes",
+            "pages": [
+              "api-reference/rest-client",
+              "api-reference/websocket-client",
+              "api-reference/websocket-api-client"
+            ]
+          },
+          {
+            "group": "Endpoint Index",
+            "pages": [
+              "api-reference/endpoint-index"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Complete REST API coverage for OKX (account, trading, funding, market data, earn, copy trading, grid trading, and more)",
+    "High-performance WebSocket client with automatic reconnect, resubscribe, and re-authentication",
+    "WebSocket API Client for promise-driven order management over WebSocket connections",
+    "Full TypeScript support with type declarations for all requests and responses",
+    "Supports all OKX regions: Global (www.okx.com), EEA (my.okx.com), and US (app.okx.com)",
+    "Browser support via webpack bundle",
+    "Over 100 end-to-end integration tests",
+    "Bundled llms.txt for LLM/AI-assisted development"
+  ],
+  "publicApiSurface": [
+    "RestClient",
+    "WebsocketClient",
+    "WebsocketAPIClient",
+    "RestClient.getBalance()",
+    "RestClient.submitOrder()",
+    "RestClient.getPositions()",
+    "RestClient.getCurrencies()",
+    "RestClient.fundsTransfer()",
+    "RestClient.getInstruments()",
+    "WebsocketClient.subscribe()",
+    "WebsocketClient.unsubscribe()",
+    "WebsocketClient.sendWSAPIRequest()",
+    "WebsocketClient.on('update', handler)",
+    "WebsocketClient.on('response', handler)",
+    "WebsocketClient.on('exception', handler)",
+    "WebsocketAPIClient.submitNewOrder()",
+    "WebsocketAPIClient.cancelOrder()",
+    "WebsocketAPIClient.amendOrder()",
+    "WebsocketAPIClient.submitMultipleOrders()",
+    "WebsocketAPIClient.massCancelOrders()"
+  ]
+}
